@@ -156,7 +156,7 @@ function parseTimerIntervals(timerMode, intervalString) {
 /**
  * Generiert eine zufällige alphanumerische ID
  */
-function generateRandomId(length = 6) {
+function generateRandomId(length = 3) {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Ohne I, O, 0, 1 zur Vermeidung von Verwechslungen
   let result = '';
   for (let i = 0; i < length; i++) {

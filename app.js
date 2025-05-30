@@ -64,8 +64,8 @@ function checkExistingSession() {
  */
 async function joinSession() {
   const sessionCode = sessionCodeInput.value.trim().toUpperCase();
-  if (!sessionCode || sessionCode.length !== 6) {
-    alert('Bitte gib einen gültigen 6-stelligen Session-Code ein.');
+  if (!sessionCode || sessionCode.length !== 3) {
+    alert('Bitte gib einen gültigen 3-stelligen Session-Code ein.');
     return;
   }
   
