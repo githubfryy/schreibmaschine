@@ -27,6 +27,38 @@ document.addEventListener('DOMContentLoaded', init);
  * Initialisierung der App
  */
 function init() {
+  // URL-Parameter prüfen
+  const urlParams = new URLSearchParams(window.location.search);
+  const configParam = urlParams.get('config');
+  
+  if (configParam) {
+    try {
+      // Session-Konfiguration aus URL-Parameter laden
+      const sessionConfig = JSON.parse(decodeURIComponent(configParam));
+      const sessionCode = sessionConfig.sessionCode;
+      
+      // Konfiguration speichern
+      saveToStorage(`session_${sessionCode}`, sessionConfig);
+      
+      // Session-State initialisieren
+      sessionState = {
+        sessionCode,
+        currentStep: 0,
+        currentPrompt: '',
+        timerEndTime: 0,
+        timerVisible: true,
+        usedPrompts: [],
+        isActive: true
+      };
+      
+      saveToStorage('current_session', sessionState);
+      startSession();
+      return;
+    } catch (error) {
+      console.error('Fehler beim Laden der Konfiguration aus URL:', error);
+    }
+  }
+  
   // Bestehende Session prüfen
   checkExistingSession();
   

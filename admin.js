@@ -253,15 +253,32 @@ function getDefaultPrompts() {
 function copySessionCode() {
   if (!currentSessionCode) return;
   
-  navigator.clipboard.writeText(currentSessionCode).then(() => {
-    copyCodeButton.textContent = 'Kopiert!';
-    setTimeout(() => {
-      copyCodeButton.textContent = 'Kopieren';
-    }, 2000);
-  }).catch(err => {
-    console.error('Fehler beim Kopieren in die Zwischenablage:', err);
-    alert('Fehler beim Kopieren: ' + err.message);
-  });
+  // Vollständige URL mit Konfiguration erstellen
+  const sessionConfig = loadFromStorage(`session_${currentSessionCode}`);
+  if (sessionConfig) {
+    const configStr = encodeURIComponent(JSON.stringify(sessionConfig));
+    const shareUrl = `${window.location.origin}/index.html?config=${configStr}`;
+    
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      copyCodeButton.textContent = 'URL kopiert!';
+      setTimeout(() => {
+        copyCodeButton.textContent = 'Kopieren';
+      }, 2000);
+    }).catch(err => {
+      console.error('Fehler beim Kopieren in die Zwischenablage:', err);
+      alert('Fehler beim Kopieren: ' + err.message);
+    });
+  } else {
+    navigator.clipboard.writeText(currentSessionCode).then(() => {
+      copyCodeButton.textContent = 'Kopiert!';
+      setTimeout(() => {
+        copyCodeButton.textContent = 'Kopieren';
+      }, 2000);
+    }).catch(err => {
+      console.error('Fehler beim Kopieren in die Zwischenablage:', err);
+      alert('Fehler beim Kopieren: ' + err.message);
+    });
+  }
 }
 
 /**
