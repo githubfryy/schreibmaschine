@@ -152,7 +152,7 @@ async function createSession() {
     }
     
     // Session-Code generieren
-    const sessionCode = generateRandomId(6);
+    const sessionCode = generateRandomId(3);
     currentSessionCode = sessionCode;
     
     // Session-Konfiguration erstellen
