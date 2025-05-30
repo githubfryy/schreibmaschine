@@ -42,7 +42,7 @@ async function init() {
 }
 
 /**
- * Lu00e4dt verfu00fcgbare Prompt-Sets
+ * Lädt verfügbare Prompt-Sets
  */
 async function loadPromptSets() {
   try {
@@ -61,7 +61,7 @@ async function loadPromptSets() {
     const doc = parser.parseFromString(html, 'text/html');
     const links = doc.querySelectorAll('a');
     
-    // Prompt-Set Optionen hinzufu00fcgen
+    // Prompt-Set Optionen hinzufügen
     let foundOptions = false;
     
     for (const link of links) {
@@ -86,13 +86,13 @@ async function loadPromptSets() {
 }
 
 /**
- * Erstellt Standard-Optionen fu00fcr Prompt-Sets
+ * Erstellt Standard-Optionen für Prompt-Sets
  */
 function createDefaultOptions() {
-  // Standard-Optionen hinzufu00fcgen
-  const defaultOptions = ['default', 'romantik', 'mystery'];
+  // Standard-Optionen hinzufügen
+  const defaultOptions = ['default', 'romantik', 'mystery', 'neu'];
   for (const name of defaultOptions) {
-    if (name === 'default') continue; // u00dcberspringe 'default', da es bereits vorhanden ist
+    if (name === 'default') continue; // Überspringe 'default', da es bereits vorhanden ist
     
     const option = document.createElement('option');
     option.value = name;
@@ -102,14 +102,14 @@ function createDefaultOptions() {
 }
 
 /**
- * Aktualisiert den Hinweistext basierend auf dem ausgewu00e4hlten Timer-Modus
+ * Aktualisiert den Hinweistext basierend auf dem ausgewählten Timer-Modus
  */
 function updateTimerHint() {
   const mode = timerModeSelect.value;
   
   switch (mode) {
     case 'fixed':
-      timerHint.textContent = 'Fu00fcr konstante Zeit einen Wert eingeben (z.B. "10")';
+      timerHint.textContent = 'Für konstante Zeit einen Wert eingeben (z.B. "10")';
       break;
       
     case 'variable':
@@ -139,7 +139,7 @@ async function createSession() {
   // Timer-Intervalle parsen
   const parsedIntervals = parseTimerIntervals(timerMode, timerIntervals);
   if (!parsedIntervals) {
-    alert('Ungu00fcltige Timer-Intervalle. Bitte u00fcberpru00fcfe das Format.');
+    alert('Ungültige Timer-Intervalle. Bitte überprüfe das Format.');
     return;
   }
   
@@ -167,14 +167,14 @@ async function createSession() {
       createdAt: new Date().toISOString()
     };
     
-    // Pru00fcfen, ob genu00fcgend Prompts vorhanden sind
+    // Prüfen, ob genügend Prompts vorhanden sind
     if (sessionConfig.anfangsPrompts.length === 0) {
-      alert('Keine Anfangsprompts gefunden. Bitte wu00e4hle ein anderes Set oder pru00fcfe die Markdown-Datei.');
+      alert('Keine Anfangsprompts gefunden. Bitte wähle ein anderes Set oder prüfe die Markdown-Datei.');
       return;
     }
     
     if (sessionConfig.ereignisPrompts.length === 0) {
-      alert('Keine Ereignisprompts gefunden. Bitte wu00e4hle ein anderes Set oder pru00fcfe die Markdown-Datei.');
+      alert('Keine Ereignisprompts gefunden. Bitte wähle ein anderes Set oder prüfe die Markdown-Datei.');
       return;
     }
     
@@ -193,10 +193,10 @@ async function createSession() {
 }
 
 /**
- * Lu00e4dt eine Prompt-Datei und parst ihren Inhalt
+ * Lädt eine Prompt-Datei und parst ihren Inhalt
  */
 async function loadPromptFile(filename) {
-  // Pru00fcfen, ob wir die Datei bereits geladen haben
+  // Prüfen, ob wir die Datei bereits geladen haben
   if (loadedPromptSets[filename]) {
     return loadedPromptSets[filename];
   }
@@ -229,20 +229,20 @@ async function loadPromptFile(filename) {
 function getDefaultPrompts() {
   return {
     'Anfangsprompts': [
-      'Sie lief barfuu00df, sie lief behende...',
+      'Sie lief barfuß, sie lief behende...',
       'Der Regen prasselte auf das Dach, als...',
       'In der Dunkelheit konnte sie nur...',
       'Die Uhr schlug Mitternacht, als...',
       'Ein seltsamer Geruch lag in der Luft...'
     ],
     'Ereignisprompts': [
-      'Jemand wird sehr eifersu00fcchtig',
-      'Ein Baum fu00e4llt um',
+      'Jemand wird sehr eifersüchtig',
+      'Ein Baum fällt um',
       'Jemand bricht sich ein Bein',
-      'Ein Rufen ertu00f6nt aus der Ferne',
+      'Ein Rufen ertönt aus der Ferne',
       'Ein Brief kommt an',
       'Ein unerwarteter Besucher erscheint',
-      'Ein Geheimnis wird gelu00fcftet'
+      'Ein Geheimnis wird gelüftet'
     ]
   };
 }
@@ -265,7 +265,7 @@ function copySessionCode() {
 }
 
 /**
- * Setzt das Formular zuru00fcck
+ * Setzt das Formular zurück
  */
 function resetForm() {
   timerIntervalsInput.value = '';
