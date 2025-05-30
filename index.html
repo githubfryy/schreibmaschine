@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schreibmaschine</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Schreibmaschine</h1>
+        
+        <!-- Session-Code Eingabe (Startseite) -->
+        <div id="session-start" class="screen">
+            <h2>Schreibsession beitreten</h2>
+            <div class="input-group">
+                <input type="text" id="session-code" placeholder="Session-Code eingeben" maxlength="6">
+                <button id="join-session">Beitreten</button>
+            </div>
+            <p class="info">Bitte gib den 6-stelligen Code ein, den du von der Gruppenleitung erhalten hast.</p>
+        </div>
+        
+        <!-- Prompt-Anzeige (Hauptbildschirm) -->
+        <div id="prompt-screen" class="screen hidden">
+            <div class="timer-container">
+                <div id="timer">00:00</div>
+                <button id="toggle-timer">Timer ausblenden</button>
+            </div>
+            
+            <div class="prompt-container">
+                <h2>Dein Prompt:</h2>
+                <div id="current-prompt" class="prompt"></div>
+            </div>
+            
+            <div class="controls">
+                <button id="next-prompt" class="admin-only hidden">Nächster Prompt</button>
+            </div>
+        </div>
+        
+        <!-- Session beendet -->
+        <div id="session-end" class="screen hidden">
+            <h2>Schreibsession beendet</h2>
+            <p>Alle Prompts wurden angezeigt. Danke fürs Teilnehmen!</p>
+            <button id="restart">Neue Session</button>
+        </div>
+    </div>
+
+    <script src="libs/marked.min.js"></script>
+    <script src="shared.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

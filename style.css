@@ -1,0 +1,237 @@
+/* Schreibmaschine - Globale Styles */
+
+:root {
+  --primary-color: #3498db;
+  --secondary-color: #2980b9;
+  --text-color: #333;
+  --light-bg: #f9f9f9;
+  --border-color: #ddd;
+  --success-color: #27ae60;
+  --error-color: #e74c3c;
+  --animation-speed: 0.3s;
+  --shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Roboto', 'Helvetica Neue', sans-serif;
+  line-height: 1.6;
+  color: var(--text-color);
+  background-color: var(--light-bg);
+  padding: 0;
+  margin: 0;
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: var(--primary-color);
+}
+
+h2 {
+  margin-bottom: 1.5rem;
+  color: var(--text-color);
+}
+
+/* Screens */
+.screen {
+  background-color: white;
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: var(--shadow);
+  transition: all var(--animation-speed);
+}
+
+.hidden {
+  display: none;
+}
+
+/* Form Elements */
+input, select, button {
+  padding: 0.8rem 1rem;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  font-size: 1rem;
+  width: 100%;
+  margin-bottom: 1rem;
+  transition: all var(--animation-speed);
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+}
+
+button {
+  background-color: var(--primary-color);
+  color: white;
+  cursor: pointer;
+  border: none;
+  font-weight: 500;
+}
+
+button:hover {
+  background-color: var(--secondary-color);
+}
+
+button.secondary-btn {
+  background-color: #95a5a6;
+}
+
+button.secondary-btn:hover {
+  background-color: #7f8c8d;
+}
+
+.input-group {
+  margin-bottom: 1.5rem;
+}
+
+label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.hint {
+  font-size: 0.8rem;
+  color: #7f8c8d;
+  margin-top: 0.3rem;
+}
+
+/* Session Start Screen */
+#session-start {
+  text-align: center;
+}
+
+#session-start input {
+  text-align: center;
+  letter-spacing: 3px;
+  font-size: 1.5rem;
+  text-transform: uppercase;
+  max-width: 300px;
+  margin: 0 auto 1rem;
+}
+
+/* Prompt Screen */
+.timer-container {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+#timer {
+  font-size: 3rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  transition: opacity 0.5s;
+}
+
+.timer-hidden #timer {
+  opacity: 0.1;
+  font-size: 1rem;
+}
+
+.prompt-container {
+  background-color: var(--light-bg);
+  padding: 2rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  border-left: 4px solid var(--primary-color);
+}
+
+.prompt {
+  font-size: 1.5rem;
+  line-height: 1.8;
+  white-space: pre-line;
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+}
+
+/* Admin Panel */
+.admin-panel {
+  background-color: white;
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: var(--shadow);
+  margin-bottom: 2rem;
+}
+
+.session-code-display {
+  text-align: center;
+  margin: 2rem 0;
+}
+
+.code-display {
+  font-size: 2rem;
+  letter-spacing: 5px;
+  font-weight: bold;
+  background-color: var(--light-bg);
+  padding: 1rem;
+  border-radius: 8px;
+  margin: 1rem 0;
+  color: var(--primary-color);
+}
+
+/* Checkbox Styling */
+input[type="checkbox"] {
+  width: auto;
+  margin-right: 0.5rem;
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+  .prompt {
+    font-size: 1.2rem;
+  }
+  
+  #timer {
+    font-size: 2.5rem;
+  }
+  
+  .screen {
+    padding: 1.5rem;
+  }
+  
+  .code-display {
+    font-size: 1.5rem;
+    letter-spacing: 3px;
+  }
+}
+
+/* Animation for new prompts */
+@keyframes newPrompt {
+  0% { transform: translateY(20px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.new-prompt {
+  animation: newPrompt 0.5s ease-out;
+}
+
+/* Timer End Animation */
+@keyframes timerEnd {
+  0% { background-color: var(--light-bg); }
+  50% { background-color: rgba(52, 152, 219, 0.2); }
+  100% { background-color: var(--light-bg); }
+}
+
+.timer-end {
+  animation: timerEnd 1s;
+}

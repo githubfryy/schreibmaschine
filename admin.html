@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schreibmaschine Admin</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container admin">
+        <h1>Schreibmaschine Admin</h1>
+        
+        <div class="admin-panel">
+            <h2>Neue Schreibsession erstellen</h2>
+            
+            <div class="input-group">
+                <label for="prompt-set">Prompt-Set:</label>
+                <select id="prompt-set">
+                    <option value="default">Standard</option>
+                    <!-- Weitere Sets werden dynamisch geladen -->
+                </select>
+            </div>
+            
+            <div class="input-group">
+                <label for="timer-mode">Timer-Modus:</label>
+                <select id="timer-mode">
+                    <option value="fixed">Fixed (konstante Zeit)</option>
+                    <option value="variable">Variable (verschiedene Zeiten)</option>
+                    <option value="random">Zufällig (zwischen Min-Max)</option>
+                </select>
+            </div>
+            
+            <div class="input-group">
+                <label for="timer-intervals">Timer-Intervalle (Minuten):</label>
+                <input type="text" id="timer-intervals" placeholder="z.B. 10 oder 5,8,10 oder 5-12">
+                <p class="hint" id="timer-hint">Für konstante Zeit einen Wert eingeben</p>
+            </div>
+            
+            <div class="input-group">
+                <label for="timer-visibility">Timer sichtbar für Teilnehmer:</label>
+                <input type="checkbox" id="timer-visibility" checked>
+            </div>
+            
+            <button id="create-session" class="primary-btn">Session erstellen</button>
+        </div>
+        
+        <div id="session-info" class="hidden">
+            <h2>Session erstellt!</h2>
+            <div class="session-code-display">
+                <h3>Session-Code:</h3>
+                <div id="session-code-display" class="code-display"></div>
+                <button id="copy-code" class="icon-btn">Kopieren</button>
+            </div>
+            
+            <p>Teile diesen Code mit den Teilnehmern, damit sie der Session beitreten können.</p>
+            <p>Die Session wird aktiv, sobald der erste Teilnehmer beitritt.</p>
+            
+            <div class="buttons">
+                <button id="new-session" class="secondary-btn">Neue Session</button>
+                <button id="join-as-admin" class="primary-btn">Als Admin teilnehmen</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="libs/marked.min.js"></script>
+    <script src="shared.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>
