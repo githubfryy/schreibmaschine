@@ -82,7 +82,38 @@ const SchreibmaschineUtils = {
 // Authentication helpers
 const SchreibmaschineAuth = {
   /**
-   * Login as participant
+   * Login participant to group using new API
+   */
+  async loginToGroup(participantId, workshopGroupId) {
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          participantId,
+          workshopGroupId
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        // Start SSE connection after successful login
+        SchreibmaschineSSE.connect(workshopGroupId);
+        return result;
+      } else {
+        throw new Error(result.error || 'Login failed');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Legacy login as participant (kept for compatibility)
    */
   loginAsParticipant(participantId, redirectUrl) {
     SchreibmaschineUtils.setCookie('schreibmaschine_session', participantId);
@@ -90,25 +121,275 @@ const SchreibmaschineAuth = {
   },
 
   /**
-   * Check if user is authenticated
+   * Logout current user
+   */
+  async logout() {
+    try {
+      // Disconnect SSE before logout
+      SchreibmaschineSSE.disconnect();
+      
+      const response = await fetch('/api/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        SchreibmaschineUtils.removeCookie('schreibmaschine_session');
+        window.location.href = '/';
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Fallback to legacy logout
+      SchreibmaschineUtils.removeCookie('schreibmaschine_session');
+      window.location.href = '/';
+    }
+  },
+
+  /**
+   * Check current session status with server
+   */
+  async checkSession() {
+    try {
+      const response = await fetch('/api/session');
+      const result = await response.json();
+      
+      if (result.authenticated) {
+        // Start SSE connection if authenticated
+        if (result.workshopGroup && !SchreibmaschineSSE.eventSource) {
+          SchreibmaschineSSE.connect(result.workshopGroup.id);
+        }
+      } else {
+        SchreibmaschineSSE.disconnect();
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('Session check error:', error);
+      return { authenticated: false };
+    }
+  },
+
+  /**
+   * Check if user is authenticated (legacy)
    */
   isAuthenticated() {
     return SchreibmaschineUtils.getCookie('schreibmaschine_session') !== null;
   },
 
   /**
-   * Get current participant ID
+   * Get current participant ID (legacy)
    */
   getCurrentParticipantId() {
     return SchreibmaschineUtils.getCookie('schreibmaschine_session');
+  }
+};
+
+// Server-Sent Events (SSE) helpers
+const SchreibmaschineSSE = {
+  eventSource: null,
+  reconnectAttempts: 0,
+  maxReconnectAttempts: 5,
+  reconnectDelay: 1000,
+
+  /**
+   * Connect to SSE stream for a workshop group
+   */
+  connect(workshopGroupId) {
+    if (this.eventSource) {
+      this.disconnect();
+    }
+
+    console.log(`📡 Connecting to SSE for group ${workshopGroupId}`);
+    
+    this.eventSource = new EventSource(`/api/groups/${workshopGroupId}/events`);
+
+    this.eventSource.onopen = () => {
+      console.log('📡 SSE connection opened');
+      this.reconnectAttempts = 0;
+      this.showToast('Mit Gruppe verbunden', 'success');
+    };
+
+    this.eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        this.handleEvent(data);
+      } catch (error) {
+        console.error('Failed to parse SSE event:', error);
+      }
+    };
+
+    this.eventSource.onerror = (error) => {
+      console.error('SSE connection error:', error);
+      
+      if (this.reconnectAttempts < this.maxReconnectAttempts) {
+        this.reconnectAttempts++;
+        const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
+        
+        console.log(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
+        setTimeout(() => {
+          this.connect(workshopGroupId);
+        }, delay);
+      } else {
+        this.showToast('Verbindung zur Gruppe verloren', 'error');
+        this.disconnect();
+      }
+    };
   },
 
   /**
-   * Logout user
+   * Disconnect from SSE stream
    */
-  logout() {
-    SchreibmaschineUtils.removeCookie('schreibmaschine_session');
-    window.location.href = '/';
+  disconnect() {
+    if (this.eventSource) {
+      console.log('📡 Disconnecting SSE');
+      this.eventSource.close();
+      this.eventSource = null;
+    }
+    this.reconnectAttempts = 0;
+  },
+
+  /**
+   * Handle incoming SSE events
+   */
+  handleEvent(event) {
+    console.log('📡 SSE Event:', event);
+
+    switch (event.type) {
+      case 'connected':
+        this.showToast('Verbunden mit Gruppe', 'success');
+        break;
+        
+      case 'online_status':
+        this.handleOnlineStatus(event.data);
+        break;
+        
+      case 'activity_update':
+        this.handleActivityUpdate(event.data);
+        break;
+        
+      case 'group_update':
+        this.handleGroupUpdate(event.data);
+        break;
+        
+      case 'heartbeat':
+        // Silent heartbeat
+        break;
+        
+      default:
+        console.log('Unknown SSE event type:', event.type);
+    }
+
+    // Emit custom DOM event for other parts of the app to listen to
+    document.dispatchEvent(new CustomEvent('sse-event', {
+      detail: event
+    }));
+  },
+
+  /**
+   * Handle online status updates
+   */
+  handleOnlineStatus(data) {
+    // Update UI with online participants
+    const onlineElement = document.getElementById('online-participants');
+    if (onlineElement) {
+      const participantsList = data.online_participants
+        .map(p => `<span class="participant online">${p.display_name}</span>`)
+        .join('');
+      
+      onlineElement.innerHTML = `
+        <h3>Online (${data.total_online})</h3>
+        <div class="participants-list">${participantsList}</div>
+      `;
+    }
+
+    // Update online indicator
+    const onlineIndicator = document.getElementById('online-indicator');
+    if (onlineIndicator) {
+      onlineIndicator.textContent = `${data.total_online} online`;
+      onlineIndicator.className = data.total_online > 0 ? 'online' : 'offline';
+    }
+  },
+
+  /**
+   * Handle activity updates
+   */
+  handleActivityUpdate(data) {
+    this.showToast(`Aktivität aktualisiert: ${data.status}`, 'info');
+    
+    // Refresh activity display if needed
+    const activityElement = document.getElementById(`activity-${data.activity_id}`);
+    if (activityElement) {
+      activityElement.classList.add('updated');
+      setTimeout(() => activityElement.classList.remove('updated'), 2000);
+    }
+  },
+
+  /**
+   * Handle group updates
+   */
+  handleGroupUpdate(data) {
+    switch (data.update_type) {
+      case 'participant_joined':
+        this.showToast('Neuer Teilnehmer ist beigetreten', 'info');
+        break;
+      case 'participant_left':
+        this.showToast('Teilnehmer hat die Gruppe verlassen', 'info');
+        break;
+      case 'status_changed':
+        this.showToast('Gruppenstatus wurde geändert', 'info');
+        break;
+    }
+  },
+
+  /**
+   * Show toast notification
+   */
+  showToast(message, type = 'info') {
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+    toast.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 12px 24px;
+      border-radius: 4px;
+      color: white;
+      font-weight: bold;
+      z-index: 10000;
+      animation: slideIn 0.3s ease-out;
+    `;
+    
+    // Set background color based on type
+    const colors = {
+      success: '#28a745',
+      error: '#dc3545',
+      info: '#17a2b8',
+      warning: '#ffc107'
+    };
+    toast.style.backgroundColor = colors[type] || colors.info;
+    
+    // Add to page
+    document.body.appendChild(toast);
+    
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.style.animation = 'slideOut 0.3s ease-in';
+        setTimeout(() => {
+          if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+          }
+        }, 300);
+      }
+    }, 3000);
   }
 };
 
@@ -216,9 +497,20 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// Auto-initialize session check on page load
+document.addEventListener('DOMContentLoaded', () => {
+  SchreibmaschineAuth.checkSession();
+});
+
+// Cleanup SSE connection when page unloads
+window.addEventListener('beforeunload', () => {
+  SchreibmaschineSSE.disconnect();
+});
+
 // Make functions globally available
 window.SchreibmaschineUtils = SchreibmaschineUtils;
 window.SchreibmaschineAuth = SchreibmaschineAuth;
+window.SchreibmaschineSSE = SchreibmaschineSSE;
 window.SchreibmaschineActivity = SchreibmaschineActivity;
 window.saveIndividualText = SchreibmaschineActivity.saveIndividualText;
 window.exportText = SchreibmaschineActivity.exportText;

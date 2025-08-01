@@ -1,4 +1,7 @@
-<div class="lobby-container">
+<div class="lobby-container" 
+     x-data="lobbyData()" 
+     x-init="initLobby()">
+  
   <div class="header">
     <div class="workshop">{{workshop.name}}</div>
     <h1 class="group-name">{{writing_group.name}}</h1>
@@ -12,9 +15,26 @@
     <p>Wähle deinen Namen aus, um der Schreibgruppe beizutreten:</p>
   </div>
   
-  <div class="participants">
+  <!-- Loading/Error Messages -->
+  <div x-show="isLoading" class="loading-message">
+    🔄 Anmeldung läuft...
+  </div>
+  
+  <div x-show="errorMessage" class="error-message" x-text="errorMessage"></div>
+  
+  <div x-show="multiDeviceMessage" class="multi-device-message">
+    <p>💻 Du bist bereits auf einem anderen Gerät angemeldet.</p>
+    <p>Du kannst trotzdem fortfahren - beide Geräte bleiben verbunden.</p>
+  </div>
+  
+  <!-- Participants List -->
+  <div class="participants" x-show="!isLoading">
     {{#each participants}}
-    <button class="participant-btn" data-participant-id="{{id}}" data-role="{{role}}">
+    <button class="participant-btn" 
+            data-participant-id="{{id}}" 
+            data-role="{{role}}"
+            x-on:click="selectParticipant('{{id}}', '{{display_name}}', '{{role}}')"
+            :disabled="isLoading">
       {{display_name}}{{#if (eq role 'teamer')}} 👑{{/if}}
     </button>
     {{/each}}
@@ -32,16 +52,64 @@
   </div>
 </div>
 
-<script src="/js/common.js"></script>
 <script>
-// TODO: Replace with Alpine.js or DataStar
-document.querySelectorAll('.participant-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const participantId = btn.dataset.participantId;
-    const role = btn.dataset.role;
+// Alpine.js component for lobby functionality
+document.addEventListener('alpine:init', () => {
+  Alpine.data('lobbyData', () => ({
+    // State
+    isLoading: false,
+    errorMessage: '',
+    multiDeviceMessage: false,
+    groupId: '{{workshop_group.id}}',
     
-    // Use the common authentication helper
-    SchreibmaschineAuth.loginAsParticipant(participantId, '{{urls.full_semantic_url}}');
-  });
+    // Initialize lobby
+    async initLobby() {
+      // Check if already authenticated
+      try {
+        const session = await SchreibmaschineAuth.checkSession();
+        if (session.authenticated && session.workshopGroup?.id === this.groupId) {
+          // Already logged in to this group, redirect to group room
+          window.location.href = '{{urls.full_semantic_url}}';
+        }
+      } catch (error) {
+        console.log('No existing session found');
+      }
+    },
+    
+    // Handle participant selection
+    async selectParticipant(participantId, displayName, role) {
+      if (this.isLoading) return;
+      
+      this.isLoading = true;
+      this.errorMessage = '';
+      this.multiDeviceMessage = false;
+      
+      try {
+        // Use new session-based login
+        const result = await SchreibmaschineAuth.loginToGroup(participantId, this.groupId);
+        
+        if (result.success) {
+          // Show multi-device message if detected
+          if (result.isMultiDevice) {
+            this.multiDeviceMessage = true;
+            // Still redirect after a short delay
+            setTimeout(() => {
+              window.location.href = '{{urls.full_semantic_url}}';
+            }, 2000);
+          } else {
+            // Immediate redirect for new sessions
+            window.location.href = '{{urls.full_semantic_url}}';
+          }
+        } else {
+          this.errorMessage = result.error || 'Anmeldung fehlgeschlagen';
+          this.isLoading = false;
+        }
+      } catch (error) {
+        console.error('Login error:', error);
+        this.errorMessage = 'Verbindungsfehler. Bitte versuche es nochmal.';
+        this.isLoading = false;
+      }
+    }
+  }));
 });
 </script>

@@ -1,7 +1,6 @@
 import { Database } from 'bun:sqlite';
 import { env, isDevelopment } from '@/config/env';
 import { join, dirname } from 'path';
-import { mkdir } from 'fs/promises';
 
 /**
  * Database connection configuration for Schreibmaschine
@@ -12,8 +11,10 @@ import { mkdir } from 'fs/promises';
 const dbPath = env.DATABASE_PATH;
 const dbDir = dirname(dbPath);
 
+// Use sync version to avoid top-level await issues
 try {
-  await mkdir(dbDir, { recursive: true });
+  const fs = require('fs');
+  fs.mkdirSync(dbDir, { recursive: true });
 } catch (error) {
   // Directory might already exist
   if (isDevelopment) {
@@ -42,8 +43,8 @@ db.exec(`
 export class DatabaseManager {
   static async executeSchema(schemaPath: string): Promise<void> {
     try {
-      const schemaFile = Bun.file(schemaPath);
-      const schema = await schemaFile.text();
+      const fs = require('fs');
+      const schema = fs.readFileSync(schemaPath, 'utf8');
       
       // Execute the entire schema at once (SQLite can handle multiple statements)
       db.exec(schema);
@@ -55,7 +56,7 @@ export class DatabaseManager {
     }
   }
   
-  static async runMigrations(migrationsDir: string): Promise<void> {
+  static async runMigrations(_migrationsDir?: string): Promise<void> {
     // Create migrations table if it doesn't exist
     db.exec(`
       CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -79,11 +80,12 @@ export class DatabaseManager {
     exists: boolean;
   } {
     try {
-      const file = Bun.file(dbPath);
+      const fs = require('fs');
+      const stats = fs.statSync(dbPath);
       return {
         path: dbPath,
-        size: file.size || 0,
-        exists: file.size !== undefined
+        size: stats.size || 0,
+        exists: true
       };
     } catch {
       return {
@@ -129,14 +131,15 @@ export class DatabaseManager {
     
     try {
       // Ensure backup directory exists
-      await mkdir(dirname(finalBackupPath), { recursive: true });
+      const fs = require('fs');
+      fs.mkdirSync(dirname(finalBackupPath), { recursive: true });
       
       // Use SQLite BACKUP command for consistent backup
       const backupDb = new Database(finalBackupPath, { create: true });
       
       // Simple file copy approach since Bun doesn't have built-in backup API yet
       db.exec('BEGIN IMMEDIATE;');
-      const data = db.prepare('SELECT * FROM sqlite_master').all();
+      db.prepare('SELECT * FROM sqlite_master').all();
       db.exec('COMMIT;');
       
       backupDb.close();

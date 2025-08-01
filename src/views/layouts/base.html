@@ -42,6 +42,18 @@
   </footer>
   {{/if}}
 
+  <!-- Alpine.js Plugins (must load before Alpine.js core) -->
+  <script src="/js/alpinejs/alpinejs_persist.js" defer></script>
+  <script src="/js/alpinejs/alpine_ajax.js" defer></script>
+  <script src="/js/alpinejs/alpinejs_focus.js" defer></script>
+  <script src="/js/alpinejs/alpinejs_intersect.js" defer></script>
+  
+  <!-- Alpine.js Core (must load last) -->
+  <script src="/js/alpinejs/alpinejs.js" defer></script>
+  
+  <!-- Common JavaScript utilities -->
+  <script src="/js/common.js"></script>
+  
   {{#if additionalJS}}
   <script src="/js/{{additionalJS}}.js"></script>
   {{/if}}

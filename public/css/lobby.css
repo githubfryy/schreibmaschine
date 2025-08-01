@@ -5,6 +5,32 @@
   margin: 0 auto;
 }
 
+/* Alpine.js Status Messages */
+.loading-message, .error-message, .multi-device-message {
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-weight: 500;
+}
+
+.loading-message {
+  background: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #93c5fd;
+}
+
+.error-message {
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+}
+
+.multi-device-message {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+
 .header {
   text-align: center;
   margin-bottom: 3rem;

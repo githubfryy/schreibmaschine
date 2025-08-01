@@ -1,76 +1,324 @@
-<div class="group-room">
+<div class="group-room" 
+     x-data="groupRoomData()" 
+     x-init="initGroupRoom()">
+     
   <div class="header">
     <div class="group-info">
       <h1>{{writing_group.name}}</h1>
       <div class="workshop">{{workshop.name}}</div>
     </div>
     <div class="online-status">
-      🟢 Online • <span id="online-count">{{online_count}}</span> Teilnehmer
+      <span x-show="isConnected" class="connection-status online">🟢 Verbunden</span>
+      <span x-show="!isConnected" class="connection-status offline">🔴 Getrennt</span>
+      • <span x-text="onlineCount"></span> Teilnehmer online
     </div>
   </div>
   
   <div class="main">
     <div class="sidebar">
       <h2>👥 Teilnehmer</h2>
-      <ul class="participant-list" id="participant-list">
-        {{#each participants}}
-        <li class="participant {{#if online}}online{{else}}offline{{/if}} {{#if (eq role 'teamer')}}teamer{{/if}}">
-          {{display_name}}{{#if (eq role 'teamer')}} 👑{{/if}}
-          {{#if is_current_user}} (Du){{/if}}
-        </li>
-        {{/each}}
+      <ul class="participant-list">
+        <template x-for="participant in allParticipants" :key="participant.id">
+          <li class="participant" 
+              :class="{ 
+                'online': isParticipantOnline(participant.id), 
+                'offline': !isParticipantOnline(participant.id),
+                'teamer': participant.role === 'teamer',
+                'current-user': participant.id === currentParticipantId
+              }">
+            <span x-text="participant.display_name"></span>
+            <span x-show="participant.role === 'teamer'"> 👑</span>
+            <span x-show="participant.id === currentParticipantId"> (Du)</span>
+            <span x-show="isParticipantOnline(participant.id)" class="online-indicator">●</span>
+          </li>
+        </template>
       </ul>
       
       <h2>🎯 Aktivitäten</h2>
-      <div id="activities">
-        {{#if activities}}
-        {{#each activities}}
-        <div class="activity-item {{status}}" data-activity-id="{{id}}">
-          <div class="activity-name">{{name}}</div>
-          <div class="activity-status">{{status_text}}</div>
+      <div class="activities">
+        <template x-for="activity in activities" :key="activity.id">
+          <div class="activity-item" 
+               :class="activity.status"
+               x-on:click="selectActivity(activity.id)">
+            <div class="activity-name" x-text="activity.name"></div>
+            <div class="activity-status" x-text="getActivityStatusText(activity.status)"></div>
+          </div>
+        </template>
+        
+        <div x-show="activities.length === 0" class="no-activities">
+          <p>Keine Aktivitäten verfügbar</p>
         </div>
-        {{/each}}
-        {{else}}
-        <p>Keine Aktivitäten verfügbar</p>
-        {{/if}}
+      </div>
+      
+      <!-- Logout Button -->
+      <div class="logout-section">
+        <button x-on:click="logout()" class="logout-btn">
+          🚪 Abmelden
+        </button>
       </div>
     </div>
     
     <div class="content">
       <h2>✍️ Schreibraum</h2>
-      {{#if current_activity}}
-      <div id="activity-content">
-        {{> activity-content current_activity}}
-      </div>
-      {{else}}
-      <p>Willkommen in der Schreibgruppe! Die Aktivitäten werden hier angezeigt, sobald sie vom Teamer gestartet werden.</p>
       
-      <div id="activity-content">
-        <!-- Activity content will be loaded here -->
+      <div x-show="currentActivity" class="activity-area">
+        <h3 x-text="currentActivity?.name"></h3>
+        <div x-show="currentActivity?.type === 'individual_pad'" class="individual-writing">
+          <textarea x-model="individualText" 
+                    placeholder="Hier kannst du schreiben..."
+                    rows="15"
+                    x-on:input.debounce.500ms="saveIndividualText()"></textarea>
+          <div class="writing-stats">
+            <span x-text="wordCount(individualText)"></span> Wörter • 
+            <span x-show="lastSaved">Zuletzt gespeichert: <span x-text="formatTime(lastSaved)"></span></span>
+          </div>
+        </div>
+        
+        <div x-show="currentActivity?.type === 'rhyming_chain'" class="rhyming-game">
+          <div x-show="isMyTurn" class="turn-active">
+            <p><strong>Du bist dran!</strong></p>
+            <p>Letzte Zeile: "<em x-text="previousLine"></em>"</p>
+            <input type="text" 
+                   x-model="currentRhyme" 
+                   placeholder="Schreibe eine passende Zeile..."
+                   x-on:keyup.enter="submitRhyme()">
+            <div class="turn-actions">
+              <button x-on:click="submitRhyme()" :disabled="!currentRhyme.trim()">
+                ✍️ Zeile senden
+              </button>
+              <button x-on:click="skipTurn()" class="skip-btn">
+                ⏭️ Überspringen
+              </button>
+            </div>
+          </div>
+          
+          <div x-show="!isMyTurn" class="turn-waiting">
+            <p><span x-text="currentPlayer"></span> ist dran...</p>
+            <p>Warte auf die nächste Runde.</p>
+          </div>
+        </div>
       </div>
-      {{/if}}
+      
+      <div x-show="!currentActivity" class="welcome-message">
+        <p>Willkommen in der Schreibgruppe! Die Aktivitäten werden hier angezeigt, sobald sie vom Teamer gestartet werden.</p>
+      </div>
     </div>
   </div>
 </div>
 
-<script src="/js/common.js"></script>
 <script>
-// TODO: Replace with Alpine.js or DataStar and proper API calls
-console.log('Group room loaded for participant:', '{{current_participant_id}}');
-console.log('Workshop Group ID:', '{{workshop_group.id}}');
-
-// TODO: 
-// 1. Load participant list via API
-// 2. Load activities via API  
-// 3. Set up SSE for real-time updates
-// 4. Implement activity interactions
-
-// Set up logout functionality if needed
-document.addEventListener('keydown', (e) => {
-  if (e.ctrlKey && e.shiftKey && e.key === 'L') {
-    if (confirm('Möchtest du dich abmelden?')) {
-      SchreibmaschineAuth.logout();
+// Alpine.js component for group room functionality
+document.addEventListener('alpine:init', () => {
+  Alpine.data('groupRoomData', () => ({
+    // State
+    groupId: '{{workshop_group.id}}',
+    currentParticipantId: '{{current_participant.id}}',
+    isConnected: false,
+    onlineParticipants: [],
+    allParticipants: {{{json participants}}},
+    activities: {{{json activities}}},
+    currentActivity: null,
+    
+    // Individual writing
+    individualText: Alpine.$persist('').as('individual-text-{{current_participant.id}}'),
+    lastSaved: null,
+    
+    // Rhyming game
+    isMyTurn: false,
+    currentRhyme: '',
+    previousLine: '',
+    currentPlayer: '',
+    
+    // Computed
+    get onlineCount() {
+      return this.onlineParticipants.length;
+    },
+    
+    // Initialize group room
+    async initGroupRoom() {
+      // Check authentication
+      const session = await SchreibmaschineAuth.checkSession();
+      if (!session.authenticated) {
+        window.location.href = '{{urls.lobby_url}}';
+        return;
+      }
+      
+      // Start SSE connection (already handled by common.js)
+      if (!SchreibmaschineSSE.eventSource) {
+        SchreibmaschineSSE.connect(this.groupId);
+      }
+      
+      // Listen for SSE events
+      document.addEventListener('sse-event', (event) => {
+        this.handleSSEEvent(event.detail);
+      });
+      
+      // Load initial data
+      this.loadActivities();
+      
+      // Set up keyboard shortcuts
+      this.setupKeyboardShortcuts();
+    },
+    
+    // Handle SSE events
+    handleSSEEvent(event) {
+      switch (event.type) {
+        case 'connected':
+          this.isConnected = true;
+          break;
+          
+        case 'online_status':
+          this.onlineParticipants = event.data.online_participants || [];
+          break;
+          
+        case 'activity_update':
+          this.loadActivities();
+          break;
+          
+        case 'heartbeat':
+          this.isConnected = true;
+          break;
+      }
+    },
+    
+    // Check if participant is online
+    isParticipantOnline(participantId) {
+      return this.onlineParticipants.some(p => p.participant_id === participantId);
+    },
+    
+    // Activity management
+    async loadActivities() {
+      try {
+        const response = await fetch(`/api/groups/${this.groupId}/activities`);
+        if (response.ok) {
+          const data = await response.json();
+          this.activities = data.activities || [];
+        }
+      } catch (error) {
+        console.error('Failed to load activities:', error);
+      }
+    },
+    
+    selectActivity(activityId) {
+      const activity = this.activities.find(a => a.id === activityId);
+      if (activity && activity.status === 'active') {
+        this.currentActivity = activity;
+        this.loadActivityState(activityId);
+      }
+    },
+    
+    async loadActivityState(activityId) {
+      try {
+        const response = await fetch(`/api/activities/${activityId}/state`);
+        if (response.ok) {
+          const state = await response.json();
+          
+          if (this.currentActivity?.type === 'rhyming_chain') {
+            this.isMyTurn = state.isMyTurn || false;
+            this.previousLine = state.previousLine || '';
+            this.currentPlayer = state.currentPlayer || '';
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load activity state:', error);
+      }
+    },
+    
+    // Individual writing
+    async saveIndividualText() {
+      if (!this.individualText.trim()) return;
+      
+      try {
+        const response = await fetch('/api/documents/individual', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            groupId: this.groupId,
+            content: this.individualText
+          })
+        });
+        
+        if (response.ok) {
+          this.lastSaved = new Date();
+        }
+      } catch (error) {
+        console.error('Failed to save text:', error);
+      }
+    },
+    
+    // Rhyming game
+    async submitRhyme() {
+      if (!this.currentRhyme.trim()) return;
+      
+      try {
+        const response = await fetch(`/api/activities/${this.currentActivity.id}/submit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: this.currentRhyme
+          })
+        });
+        
+        if (response.ok) {
+          this.currentRhyme = '';
+          this.loadActivityState(this.currentActivity.id);
+        }
+      } catch (error) {
+        console.error('Failed to submit rhyme:', error);
+      }
+    },
+    
+    async skipTurn() {
+      if (!confirm('Möchtest du wirklich deinen Zug überspringen?')) return;
+      
+      try {
+        const response = await fetch(`/api/activities/${this.currentActivity.id}/skip`, {
+          method: 'POST'
+        });
+        
+        if (response.ok) {
+          this.loadActivityState(this.currentActivity.id);
+        }
+      } catch (error) {
+        console.error('Failed to skip turn:', error);
+      }
+    },
+    
+    // Utilities
+    wordCount(text) {
+      return text.trim() ? text.trim().split(/\s+/).length : 0;
+    },
+    
+    formatTime(date) {
+      return date ? date.toLocaleTimeString('de-DE') : '';
+    },
+    
+    getActivityStatusText(status) {
+      const statusMap = {
+        'setup': 'Vorbereitung',
+        'active': 'Aktiv',
+        'paused': 'Pausiert',
+        'completed': 'Abgeschlossen'
+      };
+      return statusMap[status] || status;
+    },
+    
+    // Logout
+    async logout() {
+      if (confirm('Möchtest du dich wirklich abmelden?')) {
+        await SchreibmaschineAuth.logout();
+      }
+    },
+    
+    // Keyboard shortcuts
+    setupKeyboardShortcuts() {
+      document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.shiftKey && e.key === 'L') {
+          e.preventDefault();
+          this.logout();
+        }
+      });
     }
-  }
+  }));
 });
 </script>

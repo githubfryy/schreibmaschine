@@ -21,7 +21,8 @@
     "test:templates": "node test-templates.js",
     "test:static": "bun run type-check && bun run lint && bun run test:templates",
     "db:migrate": "bun run src/database/migrate.ts",
-    "db:seed": "bun run src/database/seed.ts"
+    "db:seed": "bun run src/database/seed.ts",
+    "download-alpinejs": "bun run scripts/download-alpinejs.js"
   },
   "dependencies": {
     "@elysiajs/html": "^1.3.0",
