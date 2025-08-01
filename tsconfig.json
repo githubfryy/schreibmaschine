@@ -1,0 +1,69 @@
+{
+  "compilerOptions": {
+    // Modern ES Target für Bun Native Support
+    "target": "ES2024",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+
+    // Bun-spezifische Optimierungen
+    "types": ["bun-types"],
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+
+    // 2025 Strict Mode - Maximum Type Safety
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noPropertyAccessFromIndexSignature": true,
+
+    // Advanced Type Features 2025
+    "useDefineForClassFields": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+
+    // Performance Optimierungen
+    "skipLibCheck": true,
+    "incremental": true,
+    "composite": false,
+
+    // Path Mapping für Clean Imports
+    "baseUrl": "./",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@/types": ["./src/types"],
+      "@/utils": ["./src/utils"],
+      "@/config": ["./src/config"],
+      "@/middleware": ["./src/middleware"],
+      "@/routes": ["./src/routes"],
+      "@/database": ["./src/database"],
+      "@/services": ["./src/services"],
+      "@/views": ["./src/views"]
+    },
+
+    // Declaration Files für Library Support
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+
+    // Modern Library Features
+    "lib": ["ES2024", "DOM", "DOM.Iterable", "WebWorker"],
+
+    // Import/Export Enhancements
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true
+  },
+  "include": ["src/**/*", "tests/**/*", "**/*.config.*"],
+  "exclude": ["node_modules", "dist", "coverage", "**/*.spec.ts", "**/*.test.ts"],
+  "ts-node": {
+    "esm": true
+  }
+}
