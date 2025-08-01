@@ -18,6 +18,8 @@
     "test": "bun test",
     "test:watch": "bun test --watch",
     "test:coverage": "bun test --coverage",
+    "test:templates": "node test-templates.js",
+    "test:static": "bun run type-check && bun run lint && bun run test:templates",
     "db:migrate": "bun run src/database/migrate.ts",
     "db:seed": "bun run src/database/seed.ts"
   },

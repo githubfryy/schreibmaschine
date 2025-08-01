@@ -1,0 +1,76 @@
+<div class="group-room">
+  <div class="header">
+    <div class="group-info">
+      <h1>{{writing_group.name}}</h1>
+      <div class="workshop">{{workshop.name}}</div>
+    </div>
+    <div class="online-status">
+      🟢 Online • <span id="online-count">{{online_count}}</span> Teilnehmer
+    </div>
+  </div>
+  
+  <div class="main">
+    <div class="sidebar">
+      <h2>👥 Teilnehmer</h2>
+      <ul class="participant-list" id="participant-list">
+        {{#each participants}}
+        <li class="participant {{#if online}}online{{else}}offline{{/if}} {{#if (eq role 'teamer')}}teamer{{/if}}">
+          {{display_name}}{{#if (eq role 'teamer')}} 👑{{/if}}
+          {{#if is_current_user}} (Du){{/if}}
+        </li>
+        {{/each}}
+      </ul>
+      
+      <h2>🎯 Aktivitäten</h2>
+      <div id="activities">
+        {{#if activities}}
+        {{#each activities}}
+        <div class="activity-item {{status}}" data-activity-id="{{id}}">
+          <div class="activity-name">{{name}}</div>
+          <div class="activity-status">{{status_text}}</div>
+        </div>
+        {{/each}}
+        {{else}}
+        <p>Keine Aktivitäten verfügbar</p>
+        {{/if}}
+      </div>
+    </div>
+    
+    <div class="content">
+      <h2>✍️ Schreibraum</h2>
+      {{#if current_activity}}
+      <div id="activity-content">
+        {{> activity-content current_activity}}
+      </div>
+      {{else}}
+      <p>Willkommen in der Schreibgruppe! Die Aktivitäten werden hier angezeigt, sobald sie vom Teamer gestartet werden.</p>
+      
+      <div id="activity-content">
+        <!-- Activity content will be loaded here -->
+      </div>
+      {{/if}}
+    </div>
+  </div>
+</div>
+
+<script src="/js/common.js"></script>
+<script>
+// TODO: Replace with Alpine.js or DataStar and proper API calls
+console.log('Group room loaded for participant:', '{{current_participant_id}}');
+console.log('Workshop Group ID:', '{{workshop_group.id}}');
+
+// TODO: 
+// 1. Load participant list via API
+// 2. Load activities via API  
+// 3. Set up SSE for real-time updates
+// 4. Implement activity interactions
+
+// Set up logout functionality if needed
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.shiftKey && e.key === 'L') {
+    if (confirm('Möchtest du dich abmelden?')) {
+      SchreibmaschineAuth.logout();
+    }
+  }
+});
+</script>

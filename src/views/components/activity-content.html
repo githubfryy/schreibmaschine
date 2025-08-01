@@ -1,0 +1,111 @@
+{{#if (eq type 'collaborative_pad')}}
+<div class="activity collaborative-pad">
+  <div class="activity-header">
+    <h3>{{name}}</h3>
+    <span class="activity-type">Gemeinsames Schreiben</span>
+  </div>
+  
+  <div class="collaborative-editor" id="collaborative-editor">
+    <div class="editor-toolbar">
+      <button class="toolbar-btn" data-action="bold">B</button>
+      <button class="toolbar-btn" data-action="italic">I</button>
+      <button class="toolbar-btn" data-action="save">💾 Speichern</button>
+    </div>
+    <div class="editor-content" contenteditable="true">
+      {{content}}
+    </div>
+  </div>
+  
+  <div class="activity-participants">
+    <strong>Aktive Schreiber:</strong>
+    {{#each active_participants}}
+    <span class="participant-badge">{{display_name}}</span>
+    {{/each}}
+  </div>
+</div>
+{{/if}}
+
+{{#if (eq type 'individual_pad')}}
+<div class="activity individual-pad">
+  <div class="activity-header">
+    <h3>{{name}}</h3>
+    <span class="activity-type">Einzelarbeit</span>
+  </div>
+  
+  <div class="individual-editor">
+    <textarea 
+      id="individual-text" 
+      placeholder="Hier kannst du schreiben..."
+      rows="10"
+    >{{content}}</textarea>
+    
+    <div class="editor-actions">
+      <button class="btn-primary" onclick="saveIndividualText()">💾 Speichern</button>
+      <button class="btn-secondary" onclick="exportText()">📤 Exportieren</button>
+    </div>
+  </div>
+  
+  <div class="activity-info">
+    <p><strong>Zeit:</strong> {{time_remaining}} Minuten verbleibend</p>
+    <p><strong>Wörter:</strong> <span id="word-count">0</span></p>
+  </div>
+</div>
+{{/if}}
+
+{{#if (eq type 'rhyming_chain')}}
+<div class="activity rhyming-chain">
+  <div class="activity-header">
+    <h3>{{name}}</h3>
+    <span class="activity-type">Reimkette</span>
+  </div>
+  
+  <div class="rhyme-chain">
+    {{#each chain_entries}}
+    <div class="chain-entry {{#if is_current_turn}}current-turn{{/if}}">
+      <div class="participant-name">{{participant_name}}</div>
+      <div class="rhyme-text">{{text}}</div>
+    </div>
+    {{/each}}
+  </div>
+  
+  {{#if is_your_turn}}
+  <div class="turn-input">
+    <p><strong>Du bist dran!</strong> Schreibe den nächsten Reim:</p>
+    <input 
+      type="text" 
+      id="rhyme-input" 
+      placeholder="Dein Reim..." 
+      maxlength="100"
+    >
+    <button class="btn-primary" onclick="submitRhyme()">Senden</button>
+  </div>
+  {{else}}
+  <div class="waiting-turn">
+    <p>Warte auf {{current_turn_participant}}...</p>
+  </div>
+  {{/if}}
+</div>
+{{/if}}
+
+{{#if (eq type 'paper_drawing')}}
+<div class="activity paper-drawing">
+  <div class="activity-header">
+    <h3>{{name}}</h3>
+    <span class="activity-type">Papier & Zeichnung</span>
+  </div>
+  
+  <div class="drawing-instructions">
+    <p>{{instructions}}</p>
+    <p><strong>Zeit:</strong> {{time_limit}} Minuten</p>
+  </div>
+  
+  <div class="timer" id="drawing-timer">
+    <span class="time-remaining">{{time_remaining}}</span>
+  </div>
+  
+  <div class="drawing-status">
+    <p>Fertig? Melde dich beim Teamer!</p>
+    <button class="btn-primary" onclick="markDrawingComplete()">✅ Fertig</button>
+  </div>
+</div>
+{{/if}}

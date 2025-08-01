@@ -87,11 +87,11 @@
 - **Export System**: All documents exportable as markdown
 - **No peeking**: Admin can't see participant work until published
 
-## Completed Work
+## Completed Work ✅
 
-### ✅ Database & Infrastructure
+### ✅ Foundation & Infrastructure
 - [x] Complete SQLite schema with all tables and relationships
-- [x] Database migration and seeding system with sample data
+- [x] Database migration and seeding system with sample data  
 - [x] Bun 1.2.19 + Elysia.js 1.3.8 setup with proper configuration
 - [x] TypeScript strict configuration with path mapping
 - [x] Biome linting and formatting configuration
@@ -100,6 +100,28 @@
 - [x] German-aware URL slugification system
 - [x] Environment configuration with Zod validation
 
+### ✅ API & Routing (COMPLETED!)
+- [x] **Core API routes** - Full CRUD for workshops, participants, groups
+- [x] **URL routing system** - Semantic URLs, short URLs, lobby redirects
+- [x] **Group routes** - Complete lobby system and group room access
+- [x] **Dual URL resolution** - Both `/gruppe-p6` and `/workshop/group` formats
+- [x] **Authentication flow** - Cookie-based session management
+
+### ✅ HTML Templates & Frontend (COMPLETED!)
+- [x] **HTML template structure** - Separate from TypeScript as requested
+- [x] **Template service** - Mustache-style templating system
+- [x] **Complete page templates** - Welcome, lobby, group room, error pages
+- [x] **Modern CSS** - Responsive design with component stylesheets  
+- [x] **JavaScript utilities** - Common functions for authentication and activities
+- [x] **Offline testing** - `test-templates.js` validates templates without server
+
+### ✅ Claude Code Integration (SOLVED!)
+- [x] **Terminal environment** - zsh configuration working perfectly
+- [x] **Tool availability** - Bun 1.2.19, Node.js v22.3.0 accessible
+- [x] **Development workflow** - User manages server, Claude does static work
+- [x] **Testing infrastructure** - `bun run test:static` for complete validation
+- [x] **Documentation** - `DEVELOPMENT.md` with complete workflow guide
+
 ### Database Status
 - **Location**: `./data/schreibmaschine.db`
 - **Size**: ~213KB with sample data
@@ -107,16 +129,13 @@
 
 ## Current Todo List
 
-### High Priority (Immediate)
-1. [pending] **Build core API routes** for workshops, groups, and participants
-2. [pending] **Build routing system** for group URLs and lobby redirects  
-3. [pending] **Create HTML template structure** separate from TypeScript
+### High Priority (Next Up)
+1. [pending] **Build session management** and online status tracking
+2. [pending] **Implement SSE endpoints** for real-time updates
 
 ### Medium Priority
 1. [pending] **Implement flexible activity system** with different activity types
-2. [pending] **Build session management** and online status tracking
-3. [pending] **Implement SSE endpoints** for real-time updates
-4. [pending] **Create admin authentication** and management routes
+2. [pending] **Create admin authentication** and management routes
 
 ### Low Priority (Future)
 1. [pending] **Design Loro CRDT integration** strategy for documents
@@ -140,21 +159,63 @@ src/
 ├── utils/              # Utility functions
 │   ├── crypto.ts       # ID generation, session tokens
 │   └── slugify.ts      # German URL slugification
-├── routes/             # API routes (TODO)
-├── services/           # Business logic (TODO)
-├── middleware/         # Elysia middleware (TODO)
-└── views/              # HTML templates (TODO)
+├── routes/             # API & page routes ✅
+│   ├── api/            # REST API endpoints
+│   │   ├── workshops.ts # Workshop CRUD
+│   │   └── participants.ts # Participant CRUD
+│   └── groups.ts       # Group URLs & lobby system
+├── services/           # Business logic ✅
+│   ├── workshop.service.ts # Workshop operations
+│   ├── participant.service.ts # Participant operations
+│   ├── url.service.ts  # URL resolution & routing
+│   └── template.service.ts # HTML template rendering
+├── views/              # HTML templates ✅
+│   ├── layouts/        # Base layouts
+│   │   └── base.html   # Main layout template
+│   ├── pages/          # Page templates
+│   │   ├── welcome.html # Welcome page
+│   │   ├── lobby.html  # Group lobby
+│   │   ├── group-room.html # Group room
+│   │   └── error.html  # Error pages
+│   └── components/     # Reusable components
+│       └── activity-content.html # Activity templates
+└── middleware/         # Elysia middleware (TODO)
+
+public/                 # Static assets ✅
+├── css/               # Stylesheets
+│   ├── main.css       # Base styles
+│   ├── lobby.css      # Lobby page styles
+│   └── group-room.css # Group room styles
+└── js/                # Client-side JavaScript
+    └── common.js      # Authentication & utilities
+
+test-templates.js      # Offline template testing ✅
+DEVELOPMENT.md         # Development workflow guide ✅
 ```
 
 ## Development Commands
 
 ```bash
-bun dev                 # Start development server with hot reload
+# Development (User-managed)
+bun run dev             # Start development server with hot reload
+
+# Static Testing (Claude Code safe)
+bun run test:static     # Full validation: type-check + lint + templates
 bun run type-check      # TypeScript validation
-bun run lint            # Biome linting
-bun run format          # Auto-format code
+bun run lint            # Biome linting  
+bun run test:templates  # Test HTML templates offline
+
+# Build & Deploy
+bun run build           # Build for production
+bun run start           # Start production server
+
+# Database
 bun run db:migrate      # Run database migrations
 bun run db:seed         # Seed development data
+
+# Code Quality
+bun run lint:fix        # Auto-fix linting issues
+bun run format          # Auto-format code
 ```
 
 ## Key Design Decisions
@@ -168,19 +229,20 @@ bun run db:seed         # Seed development data
 
 ## Next Session Priorities
 
-1. **API Routes**: Build REST endpoints for core entities
-2. **URL Routing**: Implement semantic and short URL resolution
-3. **HTML Templates**: Create base layouts and component structure
-4. **Session Management**: Cookie-based authentication system
-5. **SSE Implementation**: Real-time updates for online status
+1. **Session Management**: Enhanced online status tracking and multi-device support
+2. **SSE Implementation**: Real-time updates for online status and activity changes  
+3. **Activity System**: Flexible framework for writing exercises (collaborative_pad, rhyming_chain, etc.)
+4. **Admin Interface**: Simple password-protected management dashboard
 
 ## Important Notes
 
-- **HTML separate from TS**: Never write large HTML chunks in TypeScript - use separate HTML files
-- **German character handling**: Proper slugification for umlauts (ä→ae, ö→oe, ü→ue, ß→ss)
+- **Development Workflow**: User runs `bun run dev`, Claude uses `bun run test:static` for validation
+- **HTML separate from TS**: ✅ Implemented - templates in `src/views/` with `TemplateService`
+- **German character handling**: ✅ Implemented - proper slugification for umlauts (ä→ae, ö→oe, ü→ue, ß→ss)
 - **Local-first focus**: Everything should work offline and sync when reconnected
 - **Workshop metaphor**: Think of physical creative writing workshops - groups sit at tables, pass papers around
 - **Flexibility first**: Activity system designed to support future creative writing exercises
+- **Claude Code Terminal**: zsh environment works perfectly, Bun 1.2.19 + Node.js v22.3.0 available
 
 ## Questions for User (If Needed)
 

@@ -4,10 +4,10 @@ import { Elysia } from 'elysia';
 
 import { env, isDevelopment } from '@/config/env';
 import { apiRoutes } from '@/routes/api';
+import { groupRoutes } from '@/routes/groups';
+import { TemplateService } from '@/services/template.service';
 
 // TODO: Import remaining route handlers when implemented
-// import { groupRoutes } from '@/routes/groups';
-// import { lobbyRoutes } from '@/routes/lobby';
 // import { adminRoutes } from '@/routes/admin';
 // import { sseRoutes } from '@/routes/sse';
 
@@ -68,81 +68,31 @@ const app = new Elysia({ name: 'schreibmaschine' })
     environment: env.NODE_ENV,
   }))
 
-  // Temporary welcome page (will be replaced with proper routing)
+  // Welcome page
   .get('/', () => {
-    return new Response(
-      `
-      <!DOCTYPE html>
-      <html lang="de">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Schreibmaschine</title>
-        <style>
-          body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
-          .welcome { text-align: center; margin: 3rem 0; }
-          .status { background: #f0f9ff; padding: 1rem; border-radius: 8px; margin: 2rem 0; }
-          .todo { background: #fffbeb; padding: 1rem; border-radius: 8px; margin: 2rem 0; }
-          ul { text-align: left; }
-        </style>
-      </head>
-      <body>
-        <div class="welcome">
-          <h1>🖋️ Schreibmaschine</h1>
-          <p>Kollaborative Schreibapp für kreative Schreibwerkstätten</p>
-        </div>
-        
-        <div class="status">
-          <h2>✅ Backend läuft</h2>
-          <ul>
-            <li>Bun ${process.versions.bun || 'unknown'}</li>
-            <li>Elysia.js Server</li>
-            <li>TypeScript mit strikter Konfiguration</li>
-            <li>Environment: ${env.NODE_ENV}</li>
-            <li>Port: ${env.PORT}</li>
-          </ul>
-        </div>
-        
-        <div class="todo">
-          <h2>🚧 In Entwicklung</h2>
-          <ul>
-            <li>SQLite Datenbank Setup</li>
-            <li>Workshop & Gruppen Verwaltung</li>
-            <li>Teilnehmer Management</li>
-            <li>URL Routing System</li>
-            <li>Session Management</li>
-            <li>SSE für Echtzeit-Updates</li>
-            <li>Admin Interface</li>
-            <li>HTML Templates</li>
-          </ul>
-        </div>
-        
-        <div class="status">
-          <h2>📊 API Endpunkte</h2>
-          <ul>
-            <li><a href="/health">GET /health</a> - Server Status</li>
-            <li><a href="/api/health">GET /api/health</a> - API Status</li>
-            <li><a href="/api/workshops">GET /api/workshops</a> - Workshop API</li>
-            <li><a href="/api/participants">GET /api/participants</a> - Participant API</li>
-            <li>GET /admin - (Coming Soon)</li>
-          </ul>
-        </div>
-      </body>
-      </html>
-    `,
-      {
-        headers: { 'Content-Type': 'text/html; charset=utf-8' },
-      }
-    );
+    const html = TemplateService.render('welcome', {
+      bun_version: process.versions.bun || 'unknown',
+      environment: env.NODE_ENV,
+      port: env.PORT
+    }, {
+      title: 'Schreibmaschine',
+      showHeader: false,
+      showFooter: false
+    });
+    
+    return new Response(html, {
+      headers: { 'Content-Type': 'text/html; charset=utf-8' }
+    });
   })
 
   // Mount API routes
   .use(apiRoutes)
   
-  // TODO: Add route groups when implemented
+  // Mount group routes (handles workshop group URLs and lobby)
+  .use(groupRoutes)
+  
+  // TODO: Add remaining route groups when implemented
   // .group('/admin', (app) => app.use(adminRoutes))
-  // .use(groupRoutes)
-  // .use(lobbyRoutes)
   // .use(sseRoutes)
 
   // Start server

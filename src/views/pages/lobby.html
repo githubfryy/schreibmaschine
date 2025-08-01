@@ -1,0 +1,47 @@
+<div class="lobby-container">
+  <div class="header">
+    <div class="workshop">{{workshop.name}}</div>
+    <h1 class="group-name">{{writing_group.name}}</h1>
+    {{#if writing_group.description}}
+    <div class="description">{{writing_group.description}}</div>
+    {{/if}}
+  </div>
+  
+  <div class="info">
+    <h2>👋 Willkommen im Vorraum</h2>
+    <p>Wähle deinen Namen aus, um der Schreibgruppe beizutreten:</p>
+  </div>
+  
+  <div class="participants">
+    {{#each participants}}
+    <button class="participant-btn" data-participant-id="{{id}}" data-role="{{role}}">
+      {{display_name}}{{#if (eq role 'teamer')}} 👑{{/if}}
+    </button>
+    {{/each}}
+  </div>
+  
+  <div class="info">
+    <p><strong>💡 Hinweis:</strong> Du kannst dich auch von anderen Geräten (Tablet, Handy) mit demselben Namen anmelden.</p>
+    <p><strong>Status:</strong> {{#if is_active}}🟢 Gruppe ist aktiv{{else}}🟡 Gruppe wird vorbereitet{{/if}}</p>
+  </div>
+  
+  <div class="urls">
+    <strong>📎 URLs zum Teilen:</strong>
+    <div class="url">Direkt: {{urls.full_semantic_url}}</div>
+    <div class="url">Kurz: {{urls.short_url}}</div>
+  </div>
+</div>
+
+<script src="/js/common.js"></script>
+<script>
+// TODO: Replace with Alpine.js or DataStar
+document.querySelectorAll('.participant-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const participantId = btn.dataset.participantId;
+    const role = btn.dataset.role;
+    
+    // Use the common authentication helper
+    SchreibmaschineAuth.loginAsParticipant(participantId, '{{urls.full_semantic_url}}');
+  });
+});
+</script>

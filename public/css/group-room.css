@@ -1,0 +1,342 @@
+/* Group Room Styles */
+
+.group-room {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  background: white;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+}
+
+.group-info h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #1f2937;
+}
+
+.group-info .workshop {
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.online-status {
+  font-size: 0.9rem;
+  color: #10b981;
+  font-weight: 500;
+}
+
+/* Main Layout */
+.main {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  gap: 2rem;
+}
+
+.sidebar {
+  background: #f9fafb;
+  padding: 1.5rem;
+  border-radius: 8px;
+  height: fit-content;
+}
+
+.content {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  min-height: 600px;
+}
+
+/* Participant List */
+.participant-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 2rem 0;
+}
+
+.participant {
+  padding: 0.5rem;
+  margin: 0.25rem 0;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.participant.online {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.participant.offline {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.participant.teamer {
+  font-weight: bold;
+}
+
+/* Activities */
+.activity-item {
+  padding: 0.75rem;
+  margin: 0.5rem 0;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.activity-item:hover {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.activity-item.active {
+  background: #dbeafe;
+  border-color: #2563eb;
+}
+
+.activity-item.completed {
+  background: #f0fdf4;
+  border-color: #16a34a;
+}
+
+.activity-name {
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.activity-status {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+/* Activity Content */
+.activity {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 1rem 0;
+}
+
+.activity-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.activity-type {
+  background: #eff6ff;
+  color: #1d4ed8;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+/* Collaborative Editor */
+.collaborative-editor {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.editor-toolbar {
+  background: #f9fafb;
+  padding: 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.toolbar-btn {
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.toolbar-btn:hover {
+  background: #f3f4f6;
+}
+
+.editor-content {
+  min-height: 200px;
+  padding: 1rem;
+  outline: none;
+  font-family: inherit;
+  line-height: 1.6;
+}
+
+/* Individual Editor */
+.individual-editor textarea {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 1rem;
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.individual-editor textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.editor-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+/* Activity Info */
+.activity-info {
+  background: #f9fafb;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-top: 1rem;
+}
+
+.activity-participants {
+  margin-top: 1rem;
+}
+
+.participant-badge {
+  background: #eff6ff;
+  color: #1d4ed8;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  margin-right: 0.5rem;
+}
+
+/* Rhyming Chain */
+.rhyme-chain {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.chain-entry {
+  padding: 0.75rem;
+  margin: 0.5rem 0;
+  border-radius: 6px;
+  background: #f9fafb;
+}
+
+.chain-entry.current-turn {
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+}
+
+.participant-name {
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
+}
+
+.rhyme-text {
+  font-size: 1.1rem;
+  color: #1f2937;
+}
+
+.turn-input {
+  background: #eff6ff;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-top: 1rem;
+}
+
+.turn-input input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  margin: 0.5rem 0;
+}
+
+.waiting-turn {
+  background: #f3f4f6;
+  padding: 1rem;
+  border-radius: 6px;
+  text-align: center;
+  color: #6b7280;
+  margin-top: 1rem;
+}
+
+/* Drawing Activity */
+.drawing-instructions {
+  background: #fffbeb;
+  padding: 1rem;
+  border-radius: 6px;
+  border: 1px solid #f59e0b;
+  margin: 1rem 0;
+}
+
+.timer {
+  text-align: center;
+  margin: 2rem 0;
+}
+
+.time-remaining {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #dc2626;
+}
+
+.drawing-status {
+  text-align: center;
+  margin-top: 2rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .main {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .header {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+  
+  .sidebar {
+    order: 2;
+  }
+  
+  .content {
+    order: 1;
+  }
+  
+  .activity-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+  
+  .editor-actions {
+    flex-direction: column;
+  }
+}
