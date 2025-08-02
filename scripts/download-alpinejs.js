@@ -1,13 +1,13 @@
 #!/usr/bin/env bun
 
-import { mkdir, writeFile, readFile, stat } from 'fs/promises';
-import { join, resolve } from 'path';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
 
 // Configuration
 const config = {
   assetsDir: './public/js/alpinejs/',
   versionsFile: './scripts/versions-alpinejs.json',
-  verbose: true
+  verbose: true,
 };
 
 // All packages to check and download
@@ -25,7 +25,7 @@ const packageNames = [
   '@alpinejs/sort',
   '@alpinejs/ui',
   // Third-party Alpine.js plugins
-  '@imacrayon/alpine-ajax'
+  '@imacrayon/alpine-ajax',
 ];
 
 /**
@@ -36,11 +36,11 @@ const packageNames = [
 async function getLatestVersion(packageName) {
   try {
     const response = await fetch(`https://registry.npmjs.org/${packageName}/latest`);
-    
+
     if (!response.ok) {
       throw new Error(`Failed to fetch package info: ${response.status}`);
     }
-    
+
     const data = await response.json();
     return data.version;
   } catch (error) {
@@ -57,7 +57,7 @@ async function loadVersions() {
   try {
     const content = await readFile(config.versionsFile, 'utf8');
     return JSON.parse(content);
-  } catch (error) {
+  } catch (_error) {
     if (config.verbose) {
       console.log('📄 No existing versions.json found, creating new one');
     }
@@ -92,10 +92,10 @@ function needsUpdate(packageName, latestVersion, currentVersions) {
  */
 async function downloadFile(packageName, version) {
   const baseUrl = 'https://cdn.jsdelivr.net/npm';
-  
+
   // Generate filename and CDN path based on package type
   let filename, cdnPath;
-  
+
   if (packageName === 'alpinejs') {
     filename = 'alpinejs.js';
     cdnPath = `${packageName}@${version}/dist/cdn.min.js`;
@@ -107,24 +107,24 @@ async function downloadFile(packageName, version) {
     filename = `alpinejs_${packageName.replace('@alpinejs/', '').replace('-', '_')}.js`;
     cdnPath = `${packageName}@${version}/dist/cdn.min.js`;
   }
-  
+
   const url = `${baseUrl}/${cdnPath}`;
   const filepath = join(config.assetsDir, filename);
-  
+
   try {
     const response = await fetch(url);
-    
+
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
-    
+
     const content = await response.text();
     await writeFile(filepath, content);
-    
+
     if (config.verbose) {
       console.log(`✓ Downloaded ${filename} (v${version})`);
     }
-    
+
     return true;
   } catch (error) {
     console.error(`✗ Failed to download ${filename}:`, error.message);
@@ -137,32 +137,32 @@ async function downloadFile(packageName, version) {
  */
 async function main() {
   console.log('🚀 Starting Alpine.js packages version check & download...');
-  
+
   // Create assets directory
   await mkdir(config.assetsDir, { recursive: true });
-  
+
   // Load existing versions
   const currentVersions = await loadVersions();
   const newVersions = {};
   const toDownload = [];
-  
+
   console.log('📋 Checking package versions...');
-  
+
   // Check each package for updates
   for (const packageName of packageNames) {
     if (config.verbose) {
       console.log(`🔍 Checking ${packageName}...`);
     }
-    
+
     const latestVersion = await getLatestVersion(packageName);
-    
+
     if (!latestVersion) {
       console.warn(`⚠️  Skipping ${packageName} - couldn't get version info`);
       continue;
     }
-    
+
     newVersions[packageName] = latestVersion;
-    
+
     if (needsUpdate(packageName, latestVersion, currentVersions)) {
       const oldVersion = currentVersions[packageName] || 'none';
       console.log(`📦 ${packageName}: ${oldVersion} → ${latestVersion}`);
@@ -173,37 +173,36 @@ async function main() {
       }
     }
   }
-  
+
   // Download updated packages
   if (toDownload.length > 0) {
     console.log(`\n⬇️  Downloading ${toDownload.length} updated packages...`);
-    
+
     let successCount = 0;
     const downloadPromises = toDownload.map(async ({ packageName, version }) => {
       const success = await downloadFile(packageName, version);
       if (success) successCount++;
       return success;
     });
-    
+
     await Promise.all(downloadPromises);
-    
+
     console.log(`\n📊 Download results: ${successCount}/${toDownload.length} successful`);
-    
+
     // Update versions file
     await saveVersions(newVersions);
     console.log(`📝 Updated ${config.versionsFile}`);
-    
   } else {
     console.log('✨ All packages are up to date!');
   }
-  
+
   console.log('\n🎉 Alpine.js packages version check complete!');
 }
 
 // Enhanced argument parsing
 const parseArgs = () => {
   const args = process.argv.slice(2);
-  
+
   if (args.includes('--help') || args.includes('-h')) {
     console.log(`
 🔧 Alpine.js Packages Version Manager & Downloader
@@ -243,7 +242,7 @@ Examples:
   }
 
   config.verbose = !args.includes('--quiet');
-  
+
   // Force download all packages (ignore version cache)
   if (args.includes('--force')) {
     config.force = true;
@@ -254,7 +253,7 @@ Examples:
 parseArgs();
 
 // Run the script
-main().catch(error => {
+main().catch((error) => {
   console.error('💥 Script failed:', error.message);
   if (config.verbose) {
     console.error(error.stack);

@@ -1,26 +1,44 @@
 import { Elysia } from 'elysia';
-import { ActivityService } from '../../services/activity.service';
-import { sessionMiddleware } from '../../middleware/session';
 import { z } from 'zod';
+import { sessionMiddleware } from '../../middleware/session';
+import { ActivityService } from '../../services/activity.service';
 
 // Input validation schemas
 const ActivityCreateSchema = z.object({
   name: z.string().min(1),
-  type: z.enum(['individual_pad', 'collaborative_pad', 'rhyming_chain', 'paper_drawing', 'timed_writing', 'mashup_writing']),
+  type: z
+    .string()
+    .refine(
+      (val) =>
+        [
+          'individual_pad',
+          'collaborative_pad',
+          'rhyming_chain',
+          'paper_drawing',
+          'timed_writing',
+          'mashup_writing',
+        ].includes(val),
+      { message: 'Invalid activity type' }
+    ),
   description: z.string().optional(),
-  settings: z.record(z.any()).optional(),
-  max_participants: z.number().optional()
+  settings: z.record(z.string(), z.any()).optional(),
+  max_participants: z.number().optional(),
 });
 
 const ActivityUpdateSchema = z.object({
   name: z.string().optional(),
   description: z.string().optional(),
-  status: z.enum(['setup', 'active', 'paused', 'completed']).optional(),
-  settings: z.record(z.any()).optional()
+  status: z
+    .string()
+    .refine((val) => ['setup', 'active', 'paused', 'completed'].includes(val), {
+      message: 'Invalid status',
+    })
+    .optional(),
+  settings: z.record(z.string(), z.any()).optional(),
 });
 
 const ActivitySubmissionSchema = z.object({
-  content: z.string().min(1)
+  content: z.string().min(1),
 });
 
 export const activitiesRoutes = new Elysia({ prefix: '/activities' })
@@ -43,7 +61,8 @@ export const activitiesRoutes = new Elysia({ prefix: '/activities' })
   })
 
   // Get activity state (for current participant)
-  .get('/:activityId/state', async ({ params, activityService, participant }) => {
+  .get('/:activityId/state', async (context: any) => {
+    const { params, activityService, participant } = context;
     if (!participant?.id) {
       throw new Error('Authentication required');
     }
@@ -53,7 +72,8 @@ export const activitiesRoutes = new Elysia({ prefix: '/activities' })
   })
 
   // Create new activity (teamer only)
-  .post('/groups/:groupId', async ({ params, body, activityService, participant }) => {
+  .post('/groups/:groupId', async (context: any) => {
+    const { params, body, activityService, participant } = context;
     if (!participant?.id) {
       throw new Error('Authentication required');
     }
@@ -65,16 +85,22 @@ export const activitiesRoutes = new Elysia({ prefix: '/activities' })
     }
 
     const validated = ActivityCreateSchema.parse(body);
-    const activity = await activityService.createActivity(params.groupId, {
-      ...validated,
-      created_by: participant.id
-    });
+    const activityData = {
+      name: validated.name,
+      type: validated.type,
+      description: validated.description || '',
+      settings: validated.settings || {},
+      max_participants: validated.max_participants,
+      created_by: participant.id,
+    };
+    const activity = await activityService.createActivity(params.groupId, activityData);
 
     return { activity };
   })
 
   // Update activity (teamer only)
-  .put('/:activityId', async ({ params, body, activityService, participant }) => {
+  .put('/:activityId', async (context: any) => {
+    const { params, body, activityService, participant } = context;
     if (!participant?.id) {
       throw new Error('Authentication required');
     }
@@ -85,19 +111,29 @@ export const activitiesRoutes = new Elysia({ prefix: '/activities' })
     }
 
     // Check if user is teamer for this group
-    const isTeamer = await activityService.isTeamerForGroup(participant.id, activity.workshop_group_id);
+    const isTeamer = await activityService.isTeamerForGroup(
+      participant.id,
+      activity.workshop_group_id
+    );
     if (!isTeamer) {
       throw new Error('Only teamers can update activities');
     }
 
     const validated = ActivityUpdateSchema.parse(body);
-    const updatedActivity = await activityService.updateActivity(params.activityId, validated);
+    const updateData = {
+      ...(validated.name !== undefined && { name: validated.name }),
+      ...(validated.description !== undefined && { description: validated.description }),
+      ...(validated.status !== undefined && { status: validated.status }),
+      ...(validated.settings !== undefined && { settings: validated.settings }),
+    };
+    const updatedActivity = await activityService.updateActivity(params.activityId, updateData);
 
     return { activity: updatedActivity };
   })
 
   // Submit content to activity (participant)
-  .post('/:activityId/submit', async ({ params, body, activityService, participant }) => {
+  .post('/:activityId/submit', async (context: any) => {
+    const { params, body, activityService, participant } = context;
     if (!participant?.id) {
       throw new Error('Authentication required');
     }
@@ -113,7 +149,8 @@ export const activitiesRoutes = new Elysia({ prefix: '/activities' })
   })
 
   // Skip turn in activity (for turn-based activities)
-  .post('/:activityId/skip', async ({ params, activityService, participant }) => {
+  .post('/:activityId/skip', async (context: any) => {
+    const { params, activityService, participant } = context;
     if (!participant?.id) {
       throw new Error('Authentication required');
     }
@@ -123,7 +160,8 @@ export const activitiesRoutes = new Elysia({ prefix: '/activities' })
   })
 
   // Delete activity (teamer only)
-  .delete('/:activityId', async ({ params, activityService, participant }) => {
+  .delete('/:activityId', async (context: any) => {
+    const { params, activityService, participant } = context;
     if (!participant?.id) {
       throw new Error('Authentication required');
     }
@@ -134,7 +172,10 @@ export const activitiesRoutes = new Elysia({ prefix: '/activities' })
     }
 
     // Check if user is teamer for this group
-    const isTeamer = await activityService.isTeamerForGroup(participant.id, activity.workshop_group_id);
+    const isTeamer = await activityService.isTeamerForGroup(
+      participant.id,
+      activity.workshop_group_id
+    );
     if (!isTeamer) {
       throw new Error('Only teamers can delete activities');
     }
@@ -144,30 +185,34 @@ export const activitiesRoutes = new Elysia({ prefix: '/activities' })
   })
 
   // Error handling
-  .onError(({ error, set }) => {
+  .onError((context: any) => {
+    const { error, set } = context;
     console.error('Activity API error:', error);
-    
-    if (error.message === 'Authentication required') {
-      set.status = 401;
-      return { error: 'Authentication required' };
+
+    // Handle Error objects
+    if (error instanceof Error) {
+      if (error.message === 'Authentication required') {
+        set.status = 401;
+        return { error: 'Authentication required' };
+      }
+
+      if (error.message === 'Activity not found') {
+        set.status = 404;
+        return { error: 'Activity not found' };
+      }
+
+      if (error.message.includes('Only teamers')) {
+        set.status = 403;
+        return { error: error.message };
+      }
     }
-    
-    if (error.message === 'Activity not found') {
-      set.status = 404;
-      return { error: 'Activity not found' };
-    }
-    
-    if (error.message.includes('Only teamers')) {
-      set.status = 403;
-      return { error: error.message };
-    }
-    
-    // Validation errors
-    if (error.name === 'ZodError') {
+
+    // Validation errors (ZodError)
+    if (error && typeof error === 'object' && 'name' in error && error.name === 'ZodError') {
       set.status = 400;
-      return { error: 'Invalid input', details: error.errors };
+      return { error: 'Invalid input', details: (error as any).errors };
     }
-    
+
     // Internal server error
     set.status = 500;
     return { error: 'Internal server error' };

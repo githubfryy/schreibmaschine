@@ -1,6 +1,6 @@
 /**
  * Cryptographic utilities for Schreibmaschine
- * 
+ *
  * Provides secure ID generation and other crypto functions
  */
 
@@ -18,15 +18,18 @@ export function generateId(): string {
 export function generateShortId(): string {
   const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   const length = Math.random() > 0.5 ? 2 : 3; // Random length between 2-3
-  
+
   let result = '';
   const array = new Uint8Array(length);
   crypto.getRandomValues(array);
-  
+
   for (let i = 0; i < length; i++) {
-    result += chars[array[i] % chars.length];
+    const index = array[i];
+    if (index !== undefined) {
+      result += chars[index % chars.length];
+    }
   }
-  
+
   return result;
 }
 
@@ -36,7 +39,7 @@ export function generateShortId(): string {
 export function generateSessionToken(): string {
   const array = new Uint8Array(32);
   crypto.getRandomValues(array);
-  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+  return Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
 /**
@@ -47,7 +50,7 @@ export function simpleHash(input: string): string {
   let hash = 0;
   for (let i = 0; i < input.length; i++) {
     const char = input.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
+    hash = (hash << 5) - hash + char;
     hash = hash & hash; // Convert to 32bit integer
   }
   return Math.abs(hash).toString(36);

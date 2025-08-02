@@ -8,22 +8,33 @@
 }
 
 body {
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   line-height: 1.6;
   color: #1f2937;
   background-color: #f9fafb;
 }
 
 /* Typography */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-weight: 600;
   line-height: 1.25;
   margin-bottom: 0.5rem;
 }
 
-h1 { font-size: 2rem; }
-h2 { font-size: 1.5rem; }
-h3 { font-size: 1.25rem; }
+h1 {
+  font-size: 2rem;
+}
+h2 {
+  font-size: 1.5rem;
+}
+h3 {
+  font-size: 1.25rem;
+}
 
 p {
   margin-bottom: 1rem;
@@ -138,7 +149,9 @@ a:hover {
 }
 
 /* Cards and Containers */
-.status, .todo, .info {
+.status,
+.todo,
+.info {
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
@@ -223,7 +236,7 @@ a:hover {
   padding: 0.5rem;
   border-radius: 4px;
   margin: 0.5rem 0;
-  font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+  font-family: "SF Mono", "Monaco", "Inconsolata", monospace;
   word-break: break-all;
 }
 
@@ -232,21 +245,21 @@ a:hover {
   .main-content {
     padding: 1rem;
   }
-  
+
   .header-content {
     padding: 0 1rem;
     flex-direction: column;
     gap: 1rem;
   }
-  
+
   .main-nav {
     gap: 1rem;
   }
-  
+
   .error-actions {
     flex-direction: column;
   }
-  
+
   .welcome h1 {
     font-size: 2rem;
   }

@@ -1,12 +1,10 @@
-import { Database } from 'bun:sqlite';
+import type { Database } from 'bun:sqlite';
 import db from '../config/database';
-import type { 
-  Activity, 
-  ActivityParticipant, 
-  ActivityTurn,
+import type {
+  Activity,
+  ActivityState,
   CreateActivityData,
   UpdateActivityData,
-  ActivityState 
 } from '../types/database';
 import { generateShortId } from '../utils/crypto';
 import { RhymingGameService } from './rhyming-game.service';
@@ -74,7 +72,7 @@ export class ActivityService {
       currentPlayer: null,
       previousLine: null,
       turnOrder: [],
-      myTurnNumber: null
+      myTurnNumber: null,
     };
 
     // Check if participant is part of this activity
@@ -90,13 +88,13 @@ export class ActivityService {
     switch (activity.type) {
       case 'rhyming_chain':
         return await this.getRhymingChainState(activityId, participantId, baseState);
-      
+
       case 'individual_pad':
         return await this.getIndividualPadState(activityId, participantId, baseState);
-      
+
       case 'collaborative_pad':
         return await this.getCollaborativePadState(activityId, participantId, baseState);
-      
+
       default:
         return baseState;
     }
@@ -106,8 +104,8 @@ export class ActivityService {
    * Create new activity
    */
   async createActivity(groupId: string, data: CreateActivityData): Promise<Activity> {
-    const activityId = generateShortId(8);
-    
+    const activityId = generateShortId();
+
     const insertQuery = this.db.query(`
       INSERT INTO activities (
         id, workshop_group_id, name, type, description, 
@@ -171,7 +169,7 @@ export class ActivityService {
       throw new Error('No fields to update');
     }
 
-    updateFields.push('updated_at = datetime(\'now\')');
+    updateFields.push("updated_at = datetime('now')");
     values.push(activityId);
 
     const updateQuery = this.db.query(`
@@ -183,7 +181,7 @@ export class ActivityService {
     updateQuery.run(...values);
 
     const activity = await this.getActivityById(activityId);
-    
+
     // Initialize rhyming game when status changes to 'active'
     if (data.status === 'active' && activity?.type === 'rhyming_chain') {
       try {
@@ -231,10 +229,10 @@ export class ActivityService {
     switch (activity.type) {
       case 'rhyming_chain':
         return await this.submitRhyme(activityId, participantId, content);
-      
+
       case 'individual_pad':
         return await this.submitIndividualContent(activityId, participantId, content);
-      
+
       default:
         throw new Error('Submission not supported for this activity type');
     }
@@ -276,9 +274,9 @@ export class ActivityService {
       // Broadcast turn update
       // SSEManager.broadcastToGroup(activity.workshop_group_id, {
       //   type: 'turn_update',
-      //   data: { 
-      //     activityId, 
-      //     participantId, 
+      //   data: {
+      //     activityId,
+      //     participantId,
       //     paperId: currentPaper.paperId,
       //     nextParticipant: result.nextParticipant,
       //     action: 'skip'
@@ -297,8 +295,8 @@ export class ActivityService {
    */
   async deleteActivity(activityId: string): Promise<void> {
     // Get activity info before deletion for notifications
-    const activity = await this.getActivityById(activityId);
-    
+    // const activity = await this.getActivityById(activityId);
+
     // Delete in correct order due to foreign key constraints
     this.db.query('DELETE FROM activity_turns WHERE activity_id = ?').run(activityId);
     this.db.query('DELETE FROM activity_participants WHERE activity_id = ?').run(activityId);
@@ -321,21 +319,21 @@ export class ActivityService {
       SELECT 1 FROM group_participants 
       WHERE workshop_group_id = ? AND participant_id = ? AND role = 'teamer'
     `);
-    
+
     return !!query.get(groupId, participantId);
   }
 
   // Private helper methods
 
   private async getRhymingChainState(
-    activityId: string, 
-    participantId: string, 
+    activityId: string,
+    participantId: string,
     baseState: ActivityState
   ): Promise<ActivityState> {
     try {
       // Use the dedicated rhyming game service
       const gameState = await this.rhymingGameService.getGameState(activityId, participantId);
-      
+
       baseState.isMyTurn = gameState.isMyTurn;
       baseState.previousLine = gameState.currentPaper?.previousLine || null;
       baseState.myTurnNumber = gameState.currentPaper?.turnNumber || null;
@@ -353,8 +351,8 @@ export class ActivityService {
   }
 
   private async getIndividualPadState(
-    activityId: string, 
-    participantId: string, 
+    _activityId: string,
+    _participantId: string,
     baseState: ActivityState
   ): Promise<ActivityState> {
     // Individual pads are always available for participants
@@ -362,8 +360,8 @@ export class ActivityService {
   }
 
   private async getCollaborativePadState(
-    activityId: string, 
-    participantId: string, 
+    _activityId: string,
+    _participantId: string,
     baseState: ActivityState
   ): Promise<ActivityState> {
     // Collaborative pads need document ID and editing permissions
@@ -374,7 +372,7 @@ export class ActivityService {
     const participantsQuery = this.db.query(`
       SELECT participant_id FROM group_participants WHERE workshop_group_id = ?
     `);
-    const participants = participantsQuery.all(groupId) as Array<{participant_id: string}>;
+    const participants = participantsQuery.all(groupId) as Array<{ participant_id: string }>;
 
     const insertParticipantQuery = this.db.query(`
       INSERT INTO activity_participants (activity_id, participant_id, created_at)
@@ -386,7 +384,11 @@ export class ActivityService {
     }
   }
 
-  private async submitRhyme(activityId: string, participantId: string, content: string): Promise<any> {
+  private async submitRhyme(
+    activityId: string,
+    participantId: string,
+    content: string
+  ): Promise<any> {
     try {
       // Get current state to find which paper to submit to
       const state = await this.getActivityState(activityId, participantId);
@@ -409,14 +411,14 @@ export class ActivityService {
       );
 
       // Get activity for broadcasting
-      const activity = await this.getActivityById(activityId);
-      
+      // const activity = await this.getActivityById(activityId);
+
       // Broadcast turn update
       // SSEManager.broadcastToGroup(activity!.workshop_group_id, {
       //   type: 'turn_update',
-      //   data: { 
-      //     activityId, 
-      //     participantId, 
+      //   data: {
+      //     activityId,
+      //     participantId,
       //     content,
       //     paperId: currentPaper.paperId,
       //     nextParticipant: result.nextParticipant,
@@ -431,17 +433,13 @@ export class ActivityService {
     }
   }
 
-  private async submitIndividualContent(activityId: string, participantId: string, content: string): Promise<any> {
+  private async submitIndividualContent(
+    _activityId: string,
+    _participantId: string,
+    _content: string
+  ): Promise<any> {
     // For individual pads, we save to documents table
     // This will be handled by DocumentService
     return { success: true, saved: true };
-  }
-
-  private async getNextTurnNumber(activityId: string): Promise<number> {
-    const query = this.db.query(`
-      SELECT MAX(turn_number) as max_turn FROM activity_turns WHERE activity_id = ?
-    `);
-    const result = query.get(activityId) as {max_turn: number | null};
-    return (result?.max_turn || 0) + 1;
   }
 }

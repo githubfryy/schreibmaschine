@@ -1,6 +1,6 @@
 /**
  * Database Entity Types for Schreibmaschine
- * 
+ *
  * TypeScript interfaces that match the SQLite database schema
  */
 
@@ -72,11 +72,11 @@ export interface OnlineSession {
 // ACTIVITY SYSTEM
 // ============================================================================
 
-export type ActivityType = 
-  | 'collaborative_pad' 
-  | 'individual_pad' 
-  | 'rhyming_chain' 
-  | 'paper_drawing' 
+export type ActivityType =
+  | 'collaborative_pad'
+  | 'individual_pad'
+  | 'rhyming_chain'
+  | 'paper_drawing'
   | 'timed_writing'
   | 'mashup_writing';
 
@@ -179,11 +179,11 @@ export interface MashupWritingConfig {
   mashup_method?: 'sentence_by_sentence' | 'paragraph_by_paragraph' | 'theme_mixing';
 }
 
-export type ActivityConfig = 
-  | CollaborativePadConfig 
-  | IndividualPadConfig 
-  | RhymeChainConfig 
-  | PaperDrawingConfig 
+export type ActivityConfig =
+  | CollaborativePadConfig
+  | IndividualPadConfig
+  | RhymeChainConfig
+  | PaperDrawingConfig
   | TimedWritingConfig
   | MashupWritingConfig;
 

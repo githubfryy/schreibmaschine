@@ -1,6 +1,6 @@
 /**
  * Application-specific Types for Schreibmaschine
- * 
+ *
  * Types used throughout the application for business logic
  */
 
@@ -217,7 +217,16 @@ export interface TypingEvent extends ClientEvent {
 export interface FormField<T = unknown> {
   name: string;
   label: string;
-  type: 'text' | 'email' | 'password' | 'number' | 'textarea' | 'select' | 'checkbox' | 'radio' | 'file';
+  type:
+    | 'text'
+    | 'email'
+    | 'password'
+    | 'number'
+    | 'textarea'
+    | 'select'
+    | 'checkbox'
+    | 'radio'
+    | 'file';
   value: T;
   error?: string;
   required?: boolean;

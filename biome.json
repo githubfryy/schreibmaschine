@@ -1,21 +1,12 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.1.3/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
     "useIgnoreFile": true
   },
   "files": {
-    "ignoreUnknown": false,
-    "ignore": [
-      "node_modules/**",
-      "dist/**",
-      "coverage/**",
-      "*.log",
-      "docs/**/*.md",
-      "scripts/**",
-      ".claude/**"
-    ]
+    "ignoreUnknown": false
   },
   "formatter": {
     "enabled": true,
@@ -26,79 +17,51 @@
     "lineWidth": 100,
     "attributePosition": "auto"
   },
-  "organizeImports": {
-    "enabled": true
-  },
+  "assist": { "actions": { "source": { "organizeImports": "on" } } },
   "linter": {
     "enabled": true,
     "rules": {
       "recommended": true,
       "complexity": {
         "noExtraBooleanCast": "error",
-        "noMultipleSpacesInRegularExpressionLiterals": "error",
         "noUselessCatch": "error",
         "noUselessConstructor": "error",
         "noUselessLabel": "error",
         "noUselessRename": "error",
         "noUselessSwitchCase": "error",
-        "noWith": "error"
+        "noAdjacentSpacesInRegex": "error"
       },
       "correctness": {
-        "noConstAssign": "error",
-        "noConstantCondition": "error",
-        "noEmptyCharacterClassInRegex": "error",
-        "noEmptyPattern": "error",
-        "noGlobalObjectCalls": "error",
-        "noInvalidConstructorSuper": "error",
-        "noInvalidNewBuiltin": "error",
-        "noNonoctalDecimalEscape": "error",
-        "noPrecisionLoss": "error",
-        "noSelfAssign": "error",
-        "noSetterReturn": "error",
-        "noSwitchDeclarations": "error",
-        "noUndeclaredVariables": "error",
-        "noUnreachable": "error",
-        "noUnreachableSuper": "error",
-        "noUnsafeFinally": "error",
-        "noUnsafeOptionalChaining": "error",
-        "noUnusedLabels": "error",
-        "noUnusedVariables": "error",
-        "useIsNan": "error",
-        "useValidForDirection": "error",
-        "useYield": "error"
+        "recommended": true,
+        "noUnusedFunctionParameters": {
+          "level": "warn",
+          "options": {
+            "ignoreRestSiblings": true
+          }
+        }
       },
       "style": {
-        "noArguments": "error",
-        "noVar": "error",
-        "useConst": "error",
-        "useTemplate": "error",
-        "useShorthandFunctionType": "error"
+        "recommended": true,
+        "noNonNullAssertion": "warn",
+        "useTemplate": "error"
       },
       "suspicious": {
-        "noAsyncPromiseExecutor": "error",
-        "noCatchAssign": "error",
-        "noClassAssign": "error",
-        "noCompareNegZero": "error",
-        "noControlCharactersInRegex": "error",
-        "noDebugger": "error",
-        "noDuplicateCase": "error",
-        "noDuplicateClassMembers": "error",
-        "noDuplicateObjectKeys": "error",
-        "noDuplicateParameters": "error",
-        "noEmptyBlockStatements": "error",
-        "noExplicitAny": "warn",
-        "noExtraNonNullAssertion": "error",
-        "noFallthroughSwitchClause": "error",
-        "noFunctionAssign": "error",
-        "noGlobalAssign": "error",
-        "noImportAssign": "error",
-        "noMisleadingCharacterClass": "error",
-        "noPrototypeBuiltins": "error",
-        "noRedeclare": "error",
-        "noShadowRestrictedNames": "error",
-        "noUnsafeNegation": "error",
-        "useGetterReturn": "error",
-        "useValidTypeof": "error"
+        "recommended": true,
+        "noAlert": "error",
+        "noFocusedTests": "error",
+        "noWith": "error"
+      },
+      "performance": {
+        "recommended": true
+      },
+      "security": {
+        "recommended": true
+      },
+      "a11y": {
+        "recommended": true
+      },
+      "nursery": {
+        "recommended": false
       }
     }
   },
@@ -119,5 +82,41 @@
     "formatter": {
       "trailingCommas": "none"
     }
-  }
+  },
+  "css": {
+    "formatter": {
+      "enabled": true,
+      "indentWidth": 2,
+      "lineWidth": 100
+    },
+    "linter": {
+      "enabled": true
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["test-templates.js"],
+      "javascript": {
+        "formatter": {
+          "quoteStyle": "single"
+        }
+      },
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noStaticOnlyClass": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["public/js/alpinejs/**", "src/assets/js/**"],
+      "linter": {
+        "enabled": false
+      },
+      "formatter": {
+        "enabled": false
+      }
+    }
+  ]
 }

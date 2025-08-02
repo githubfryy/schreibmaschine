@@ -3,9 +3,9 @@ import { staticPlugin } from '@elysiajs/static';
 import { Elysia } from 'elysia';
 
 import { env, isDevelopment } from '@/config/env';
+import { sessionRoutes } from '@/middleware/session';
 import { apiRoutes } from '@/routes/api';
 import { groupRoutes } from '@/routes/groups';
-import { sessionRoutes } from '@/middleware/session';
 import { sseRoutes } from '@/routes/sse';
 import { TemplateService } from '@/services/template.service';
 
@@ -71,35 +71,39 @@ const app = new Elysia()
 
   // Welcome page
   .get('/', () => {
-    const html = TemplateService.render('welcome', {
-      bun_version: process.versions.bun || 'unknown',
-      environment: env.NODE_ENV,
-      port: env.PORT
-    }, {
-      title: 'Schreibmaschine',
-      showHeader: false,
-      showFooter: false
-    });
-    
+    const html = TemplateService.render(
+      'welcome',
+      {
+        bun_version: process.versions.bun || 'unknown',
+        environment: env.NODE_ENV,
+        port: env.PORT,
+      },
+      {
+        title: 'Schreibmaschine',
+        showHeader: false,
+        showFooter: false,
+      }
+    );
+
     return new Response(html, {
-      headers: { 'Content-Type': 'text/html; charset=utf-8' }
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
     });
   })
 
   // Mount API routes
   .use(apiRoutes)
-  
+
   // Mount session routes (login/logout/status)
   .use(sessionRoutes)
-  
+
   // Mount SSE routes (real-time updates)
   .use(sseRoutes)
-  
+
   // Mount group routes (handles workshop group URLs and lobby)
-  .use(groupRoutes)
-  
-  // TODO: Add remaining route groups when implemented
-  // .group('/admin', (app) => app.use(adminRoutes))
+  .use(groupRoutes);
+
+// TODO: Add remaining route groups when implemented
+// .group('/admin', (app) => app.use(adminRoutes))
 
 // For development, let Bun handle the server startup
 export type App = typeof app;

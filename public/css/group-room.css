@@ -456,27 +456,27 @@
     grid-template-columns: 1fr;
     gap: 1rem;
   }
-  
+
   .header {
     flex-direction: column;
     gap: 1rem;
     text-align: center;
   }
-  
+
   .sidebar {
     order: 2;
   }
-  
+
   .content {
     order: 1;
   }
-  
+
   .activity-header {
     flex-direction: column;
     align-items: stretch;
     gap: 0.5rem;
   }
-  
+
   .editor-actions {
     flex-direction: column;
   }

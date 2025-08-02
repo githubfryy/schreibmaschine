@@ -1,23 +1,23 @@
 /**
  * API Request/Response Types for Schreibmaschine
- * 
+ *
  * TypeScript interfaces for HTTP API endpoints
  */
 
-import type { 
-  Workshop, 
-  WritingGroup, 
-  Participant, 
-  WorkshopGroup,
+import type {
   Activity,
-  OnlineStatus,
-  SessionInfo,
-  GroupUrl,
-  ActivityType,
   ActivityConfig,
+  ActivityType,
+  GroupUrl,
+  OnlineStatus,
   PaginatedResult,
+  Participant,
+  SessionInfo,
+  Workshop,
+  WorkshopGroup,
+  WorkshopGroupWithDetails,
   WorkshopWithGroups,
-  WorkshopGroupWithDetails 
+  WritingGroup,
 } from './database';
 
 // ============================================================================
@@ -52,13 +52,13 @@ export interface ValidationError extends ApiError {
 // SERVER-SENT EVENTS
 // ============================================================================
 
-export interface SSEEvent {
+export interface BaseSSEEvent {
   id?: string;
   type?: string;
-  data?: any;
+  data?: unknown;
 }
 
-export interface SSEConnectionEvent extends SSEEvent {
+export interface SSEConnectionEvent extends BaseSSEEvent {
   type: 'connected';
   data: {
     groupId: string;
@@ -66,7 +66,7 @@ export interface SSEConnectionEvent extends SSEEvent {
   };
 }
 
-export interface SSEOnlineStatusEvent extends SSEEvent {
+export interface SSEOnlineStatusEvent extends BaseSSEEvent {
   type: 'online_status';
   data: {
     online_participants: Array<{
@@ -76,7 +76,7 @@ export interface SSEOnlineStatusEvent extends SSEEvent {
   };
 }
 
-export interface SSEActivityUpdateEvent extends SSEEvent {
+export interface SSEActivityUpdateEvent extends BaseSSEEvent {
   type: 'activity_update';
   data: {
     activityId: string;
@@ -85,7 +85,7 @@ export interface SSEActivityUpdateEvent extends SSEEvent {
   };
 }
 
-export interface SSETurnUpdateEvent extends SSEEvent {
+export interface SSETurnUpdateEvent extends BaseSSEEvent {
   type: 'turn_update';
   data: {
     activityId: string;
@@ -96,17 +96,17 @@ export interface SSETurnUpdateEvent extends SSEEvent {
   };
 }
 
-export interface SSEDocumentUpdateEvent extends SSEEvent {
+export interface SSEDocumentUpdateEvent extends BaseSSEEvent {
   type: 'document_update';
   data: {
     documentId: string;
     participantId: string;
-    operations: any[];
+    operations: unknown[];
     newVersion: number;
   };
 }
 
-export interface SSEHeartbeatEvent extends SSEEvent {
+export interface SSEHeartbeatEvent extends BaseSSEEvent {
   type: 'heartbeat';
   data: {
     timestamp: string;
@@ -232,12 +232,13 @@ export interface LoginRequest {
   device_info?: string;
 }
 
-export interface LoginResponse extends ApiResponse<{
-  session_token: string;
-  participant: Participant;
-  workshop_group: WorkshopGroupWithDetails;
-  expires_at: string;
-}> {}
+export interface LoginResponse
+  extends ApiResponse<{
+    session_token: string;
+    participant: Participant;
+    workshop_group: WorkshopGroupWithDetails;
+    expires_at: string;
+  }> {}
 
 export interface SessionStatusResponse extends ApiResponse<SessionInfo> {}
 
@@ -254,13 +255,14 @@ export interface LobbyInfoRequest {
   group_slug: string;
 }
 
-export interface LobbyInfoResponse extends ApiResponse<{
-  workshop: Workshop;
-  writing_group: WritingGroup;
-  participants: Participant[];
-  urls: GroupUrl;
-  is_active: boolean;
-}> {}
+export interface LobbyInfoResponse
+  extends ApiResponse<{
+    workshop: Workshop;
+    writing_group: WritingGroup;
+    participants: Participant[];
+    urls: GroupUrl;
+    is_active: boolean;
+  }> {}
 
 export interface GroupAccessRequest {
   workshop_slug: string;
@@ -268,12 +270,13 @@ export interface GroupAccessRequest {
   participant_id?: string; // Optional if already in session
 }
 
-export interface GroupAccessResponse extends ApiResponse<{
-  workshop_group: WorkshopGroupWithDetails;
-  participant: Participant;
-  session_token: string;
-  urls: GroupUrl;
-}> {}
+export interface GroupAccessResponse
+  extends ApiResponse<{
+    workshop_group: WorkshopGroupWithDetails;
+    participant: Participant;
+    session_token: string;
+    urls: GroupUrl;
+  }> {}
 
 // ============================================================================
 // REAL-TIME & SSE API
@@ -286,7 +289,14 @@ export interface OnlineStatusRequest {
 export interface OnlineStatusResponse extends ApiResponse<OnlineStatus> {}
 
 export interface SSEEvent {
-  type: 'online_status' | 'activity_update' | 'turn_change' | 'document_update' | 'group_update';
+  id?: string;
+  type:
+    | 'online_status'
+    | 'activity_update'
+    | 'turn_change'
+    | 'document_update'
+    | 'group_update'
+    | 'heartbeat';
   data: unknown;
   timestamp: string;
   workshop_group_id: string;
@@ -342,33 +352,35 @@ export interface AdminLoginRequest {
   password: string;
 }
 
-export interface AdminLoginResponse extends ApiResponse<{
-  admin_token: string;
-  expires_at: string;
-}> {}
+export interface AdminLoginResponse
+  extends ApiResponse<{
+    admin_token: string;
+    expires_at: string;
+  }> {}
 
-export interface AdminDashboardResponse extends ApiResponse<{
-  workshops: {
-    total: number;
-    active: number;
-    recent: Workshop[];
-  };
-  participants: {
-    total: number;
-    online: number;
-    recent: Participant[];
-  };
-  groups: {
-    total: number;
-    active: number;
-    recent: WorkshopGroup[];
-  };
-  activities: {
-    total: number;
-    active: number;
-    by_type: Record<ActivityType, number>;
-  };
-}> {}
+export interface AdminDashboardResponse
+  extends ApiResponse<{
+    workshops: {
+      total: number;
+      active: number;
+      recent: Workshop[];
+    };
+    participants: {
+      total: number;
+      online: number;
+      recent: Participant[];
+    };
+    groups: {
+      total: number;
+      active: number;
+      recent: WorkshopGroup[];
+    };
+    activities: {
+      total: number;
+      active: number;
+      by_type: Record<ActivityType, number>;
+    };
+  }> {}
 
 // ============================================================================
 // URL RESOLUTION API
@@ -378,11 +390,12 @@ export interface ResolveUrlRequest {
   path: string; // e.g., "/fruehling_2025/hoerspiele" or "/gruppe-p6"
 }
 
-export interface ResolveUrlResponse extends ApiResponse<{
-  workshop_group: WorkshopGroupWithDetails;
-  urls: GroupUrl;
-  resolved_from: 'semantic' | 'short_id';
-}> {}
+export interface ResolveUrlResponse
+  extends ApiResponse<{
+    workshop_group: WorkshopGroupWithDetails;
+    urls: GroupUrl;
+    resolved_from: 'semantic' | 'short_id';
+  }> {}
 
 // ============================================================================
 // ACTIVITY TURN MANAGEMENT API
@@ -394,13 +407,14 @@ export interface AdvanceTurnRequest {
   skip?: boolean; // Skip current participant's turn
 }
 
-export interface AdvanceTurnResponse extends ApiResponse<{
-  current_participant: Participant | null;
-  next_participant: Participant | null;
-  turn_number: number;
-  paper_id?: string;
-  is_complete: boolean;
-}> {}
+export interface AdvanceTurnResponse
+  extends ApiResponse<{
+    current_participant: Participant | null;
+    next_participant: Participant | null;
+    turn_number: number;
+    paper_id?: string;
+    is_complete: boolean;
+  }> {}
 
 export interface SubmitTurnRequest {
   activity_id: string;
@@ -408,12 +422,13 @@ export interface SubmitTurnRequest {
   content: string;
 }
 
-export interface SubmitTurnResponse extends ApiResponse<{
-  turn_id: string;
-  next_participant: Participant | null;
-  is_paper_complete: boolean;
-  is_activity_complete: boolean;
-}> {}
+export interface SubmitTurnResponse
+  extends ApiResponse<{
+    turn_id: string;
+    next_participant: Participant | null;
+    is_paper_complete: boolean;
+    is_activity_complete: boolean;
+  }> {}
 
 // ============================================================================
 // EXPORT API
@@ -427,12 +442,13 @@ export interface ExportRequest {
   include_participants?: string[]; // Participant IDs
 }
 
-export interface ExportResponse extends ApiResponse<{
-  download_url: string;
-  filename: string;
-  expires_at: string;
-  size_bytes: number;
-}> {}
+export interface ExportResponse
+  extends ApiResponse<{
+    download_url: string;
+    filename: string;
+    expires_at: string;
+    size_bytes: number;
+  }> {}
 
 // ============================================================================
 // SEARCH API
@@ -454,12 +470,13 @@ export interface SearchResult {
   highlight?: string; // Matched text snippet
 }
 
-export interface SearchResponse extends ApiResponse<{
-  results: SearchResult[];
-  total: number;
-  query: string;
-  took_ms: number;
-}> {}
+export interface SearchResponse
+  extends ApiResponse<{
+    results: SearchResult[];
+    total: number;
+    query: string;
+    took_ms: number;
+  }> {}
 
 // ============================================================================
 // BULK OPERATIONS API
@@ -470,14 +487,15 @@ export interface BulkCreateParticipantsRequest {
   workshop_group_id?: string; // Automatically add to group
 }
 
-export interface BulkCreateParticipantsResponse extends ApiResponse<{
-  created: Participant[];
-  errors: Array<{
-    index: number;
-    error: string;
-    data: CreateParticipantRequest;
-  }>;
-}> {}
+export interface BulkCreateParticipantsResponse
+  extends ApiResponse<{
+    created: Participant[];
+    errors: Array<{
+      index: number;
+      error: string;
+      data: CreateParticipantRequest;
+    }>;
+  }> {}
 
 export interface BulkUpdateGroupParticipantsRequest {
   workshop_group_id: string;
@@ -504,8 +522,6 @@ export function isApiError(response: unknown): response is ApiError {
 
 export function isValidationError(response: unknown): response is ValidationError {
   return (
-    isApiError(response) &&
-    response.code === 'VALIDATION_ERROR' &&
-    Array.isArray(response.details)
+    isApiError(response) && response.code === 'VALIDATION_ERROR' && Array.isArray(response.details)
   );
 }

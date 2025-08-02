@@ -1,7 +1,7 @@
 import { db } from '@/config/database';
 import { env } from '@/config/env';
-import { generateSessionToken } from '@/utils/crypto';
 import type { OnlineSession, Participant, WorkshopGroup } from '@/types/database';
+import { generateSessionToken } from '@/utils/crypto';
 
 /**
  * Session Management Service
@@ -82,14 +82,17 @@ export class SessionService {
   /**
    * Get all online participants in a group
    */
-  static async getOnlineParticipants(workshopGroupId: string): Promise<Array<{
-    participant: Participant;
-    lastSeen: string;
-    deviceCount: number;
-  }>> {
+  static async getOnlineParticipants(workshopGroupId: string): Promise<
+    Array<{
+      participant: Participant;
+      lastSeen: string;
+      deviceCount: number;
+    }>
+  > {
     const cutoffTime = new Date(Date.now() - env.ONLINE_STATUS_TIMEOUT).toISOString();
 
-    const results = db.prepare(`
+    const results = db
+      .prepare(`
       SELECT 
         p.id,
         p.full_name,
@@ -102,7 +105,8 @@ export class SessionService {
         AND os.last_seen > ?
       GROUP BY p.id, p.full_name, p.display_name
       ORDER BY last_seen DESC
-    `).all(workshopGroupId, cutoffTime) as Array<{
+    `)
+      .all(workshopGroupId, cutoffTime) as Array<{
       id: string;
       full_name: string;
       display_name: string;
@@ -110,16 +114,16 @@ export class SessionService {
       device_count: number;
     }>;
 
-    return results.map(row => ({
+    return results.map((row) => ({
       participant: {
         id: row.id,
         full_name: row.full_name,
         display_name: row.display_name,
         created_at: '', // Not needed for this view
-        updated_at: ''
+        updated_at: '',
       },
       lastSeen: row.last_seen,
-      deviceCount: row.device_count
+      deviceCount: row.device_count,
     }));
   }
 
@@ -130,7 +134,8 @@ export class SessionService {
     participant: Participant;
     workshopGroup: WorkshopGroup;
   } | null> {
-    const result = db.prepare(`
+    const result = db
+      .prepare(`
       SELECT 
         p.id as participant_id,
         p.full_name,
@@ -152,10 +157,8 @@ export class SessionService {
       JOIN workshop_groups wg ON os.workshop_group_id = wg.id
       WHERE os.session_token = ?
         AND os.last_seen > ?
-    `).get(
-      sessionToken,
-      new Date(Date.now() - env.ONLINE_STATUS_TIMEOUT).toISOString()
-    ) as any;
+    `)
+      .get(sessionToken, new Date(Date.now() - env.ONLINE_STATUS_TIMEOUT).toISOString()) as any;
 
     if (!result) return null;
 
@@ -165,7 +168,7 @@ export class SessionService {
         full_name: result.full_name,
         display_name: result.display_name,
         created_at: result.participant_created_at,
-        updated_at: result.participant_updated_at
+        updated_at: result.participant_updated_at,
       },
       workshopGroup: {
         id: result.workshop_group_id,
@@ -177,24 +180,27 @@ export class SessionService {
         status: result.status,
         participant_order: result.participant_order,
         created_at: result.group_created_at,
-        updated_at: result.group_updated_at
-      }
+        updated_at: result.group_updated_at,
+      },
     };
   }
 
   /**
    * Get all online participants across all groups (for admin dashboard)
    */
-  static async getAllOnlineParticipants(): Promise<Array<{
-    participant: Participant;
-    workshopName: string;
-    groupName: string;
-    lastSeen: string;
-    deviceCount: number;
-  }>> {
+  static async getAllOnlineParticipants(): Promise<
+    Array<{
+      participant: Participant;
+      workshopName: string;
+      groupName: string;
+      lastSeen: string;
+      deviceCount: number;
+    }>
+  > {
     const cutoffTime = new Date(Date.now() - env.ONLINE_STATUS_TIMEOUT).toISOString();
 
-    const results = db.prepare(`
+    const results = db
+      .prepare(`
       SELECT 
         p.id,
         p.full_name,
@@ -211,7 +217,8 @@ export class SessionService {
       WHERE os.last_seen > ?
       GROUP BY p.id, w.name, wg.id
       ORDER BY last_seen DESC
-    `).all(cutoffTime) as Array<{
+    `)
+      .all(cutoffTime) as Array<{
       id: string;
       full_name: string;
       display_name: string;
@@ -221,18 +228,18 @@ export class SessionService {
       device_count: number;
     }>;
 
-    return results.map(row => ({
+    return results.map((row) => ({
       participant: {
         id: row.id,
         full_name: row.full_name,
         display_name: row.display_name,
         created_at: '',
-        updated_at: ''
+        updated_at: '',
       },
       workshopName: row.workshop_name,
       groupName: row.group_name,
       lastSeen: row.last_seen,
-      deviceCount: row.device_count
+      deviceCount: row.device_count,
     }));
   }
 
@@ -241,10 +248,8 @@ export class SessionService {
    */
   static async cleanupExpiredSessions(): Promise<number> {
     const cutoffTime = new Date(Date.now() - env.ONLINE_STATUS_TIMEOUT).toISOString();
-    
-    const result = db
-      .prepare(`DELETE FROM online_sessions WHERE last_seen < ?`)
-      .run(cutoffTime);
+
+    const result = db.prepare(`DELETE FROM online_sessions WHERE last_seen < ?`).run(cutoffTime);
 
     return result.changes;
   }
@@ -253,7 +258,7 @@ export class SessionService {
    * Check if participant is authorized for group
    */
   static async isParticipantAuthorized(
-    participantId: string, 
+    participantId: string,
     workshopGroupId: string
   ): Promise<boolean> {
     const result = db
@@ -273,20 +278,27 @@ export class SessionService {
     participantId: string,
     workshopGroupId: string
   ): Promise<'participant' | 'teamer' | null> {
-    const result = db.prepare(`
+    const result = db
+      .prepare(`
       SELECT role FROM group_participants 
       WHERE participant_id = ? AND workshop_group_id = ?
-    `).get(participantId, workshopGroupId) as { role: string } | undefined;
+    `)
+      .get(participantId, workshopGroupId) as { role: string } | undefined;
 
     return result?.role as 'participant' | 'teamer' | null;
   }
 }
 
 // Cleanup expired sessions every 5 minutes
-setInterval(() => {
-  SessionService.cleanupExpiredSessions().then(cleaned => {
-    if (cleaned > 0) {
-      console.log(`🧹 Cleaned up ${cleaned} expired sessions`);
-    }
-  }).catch(console.error);
-}, 5 * 60 * 1000);
+setInterval(
+  () => {
+    SessionService.cleanupExpiredSessions()
+      .then((cleaned) => {
+        if (cleaned > 0) {
+          console.log(`🧹 Cleaned up ${cleaned} expired sessions`);
+        }
+      })
+      .catch(console.error);
+  },
+  5 * 60 * 1000
+);

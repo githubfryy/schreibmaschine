@@ -24,7 +24,7 @@ export class SSEService {
     if (!this.connections.has(groupId)) {
       this.connections.set(groupId, new Set());
     }
-    this.connections.get(groupId)!.add(stream);
+    this.connections.get(groupId)?.add(stream);
   }
 
   /**
@@ -68,7 +68,7 @@ export class SSEService {
   /**
    * Send an event to a specific participant
    */
-  sendToParticipant(groupId: string, participantId: string, event: SSEEvent): void {
+  sendToParticipant(groupId: string, _participantId: string, event: SSEEvent): void {
     // For now, we'll broadcast to the whole group
     // In a more sophisticated implementation, we'd track participant-to-connection mapping
     this.broadcastToGroup(groupId, event);
@@ -93,30 +93,28 @@ export class SSEService {
    */
   private formatSSEMessage(event: SSEEvent): string {
     let message = '';
-    
+
     if (event.id) {
       message += `id: ${event.id}\n`;
     }
-    
+
     if (event.type) {
       message += `event: ${event.type}\n`;
     }
-    
+
     if (event.data) {
-      const dataString = typeof event.data === 'string' 
-        ? event.data 
-        : JSON.stringify(event.data);
-      
+      const dataString = typeof event.data === 'string' ? event.data : JSON.stringify(event.data);
+
       // SSE data can be multi-line, each line needs "data: " prefix
       const dataLines = dataString.split('\n');
       for (const line of dataLines) {
         message += `data: ${line}\n`;
       }
     }
-    
+
     // Empty line to signal end of event
     message += '\n';
-    
+
     return message;
   }
 
@@ -124,12 +122,15 @@ export class SSEService {
    * Send heartbeat to all connections
    */
   sendHeartbeat(): void {
-    const heartbeatEvent: SSEEvent = {
-      type: 'heartbeat',
-      data: { timestamp: new Date().toISOString() }
-    };
+    const timestamp = new Date().toISOString();
 
     for (const groupId of this.getActiveGroups()) {
+      const heartbeatEvent: SSEEvent = {
+        type: 'heartbeat',
+        data: { timestamp },
+        timestamp,
+        workshop_group_id: groupId,
+      };
       this.broadcastToGroup(groupId, heartbeatEvent);
     }
   }
@@ -140,19 +141,19 @@ export class SSEService {
   cleanup(): void {
     for (const [groupId, connections] of this.connections.entries()) {
       const workingConnections = new Set<WritableStream>();
-      
+
       for (const stream of connections) {
         try {
           // Test if connection is still alive
           const writer = stream.getWriter();
           writer.releaseLock();
           workingConnections.add(stream);
-        } catch (error) {
+        } catch (_error) {
           // Connection is broken, don't add to working set
           console.warn('Removing broken connection during cleanup');
         }
       }
-      
+
       if (workingConnections.size === 0) {
         this.connections.delete(groupId);
       } else {

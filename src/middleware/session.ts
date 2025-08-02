@@ -18,86 +18,85 @@ export interface SessionContext {
 /**
  * Session middleware plugin
  */
-export const sessionMiddleware = new Elysia({ name: 'session' })
-  .derive(async ({ cookie }) => {
-    const sessionToken = cookie['session_token']?.value;
-    
-    if (!sessionToken) {
-      return { 
-        participant: undefined,
-        workshopGroup: undefined,
-        sessionToken: undefined,
-        isAuthenticated: false 
-      };
-    }
+export const sessionMiddleware = new Elysia({ name: 'session' }).derive(async ({ cookie }) => {
+  const sessionToken = cookie['session_token']?.value;
 
-    // Update session activity (heartbeat)
-    const isActive = await SessionService.updateSessionActivity(sessionToken);
-    if (!isActive) {
-      return { 
-        participant: undefined,
-        workshopGroup: undefined,
-        sessionToken: undefined,
-        isAuthenticated: false 
-      };
-    }
-
-    // Get session info
-    const sessionInfo = await SessionService.getSessionInfo(sessionToken);
-    if (!sessionInfo) {
-      return { 
-        participant: undefined,
-        workshopGroup: undefined,
-        sessionToken: undefined,
-        isAuthenticated: false 
-      };
-    }
-
+  if (!sessionToken) {
     return {
-      participant: sessionInfo.participant,
-      workshopGroup: sessionInfo.workshopGroup,
-      sessionToken,
-      isAuthenticated: true
+      participant: undefined,
+      workshopGroup: undefined,
+      sessionToken: undefined,
+      isAuthenticated: false,
     };
-  });
+  }
+
+  // Update session activity (heartbeat)
+  const isActive = await SessionService.updateSessionActivity(sessionToken);
+  if (!isActive) {
+    return {
+      participant: undefined,
+      workshopGroup: undefined,
+      sessionToken: undefined,
+      isAuthenticated: false,
+    };
+  }
+
+  // Get session info
+  const sessionInfo = await SessionService.getSessionInfo(sessionToken);
+  if (!sessionInfo) {
+    return {
+      participant: undefined,
+      workshopGroup: undefined,
+      sessionToken: undefined,
+      isAuthenticated: false,
+    };
+  }
+
+  return {
+    participant: sessionInfo.participant,
+    workshopGroup: sessionInfo.workshopGroup,
+    sessionToken,
+    isAuthenticated: true,
+  };
+});
 
 /**
  * Require authentication middleware
  */
-export const requireAuth = new Elysia({ name: 'requireAuth' })
-  .use(sessionMiddleware)
-  .guard({
-    beforeHandle({ isAuthenticated, set }) {
-      if (!isAuthenticated) {
-        set.status = 401;
-        return { error: 'Authentication required' };
-      }
+export const requireAuth = new Elysia({ name: 'requireAuth' }).use(sessionMiddleware).guard({
+  beforeHandle(context: any) {
+    const { isAuthenticated, set } = context;
+    if (!isAuthenticated) {
+      set.status = 401;
+      return { error: 'Authentication required' };
     }
-  });
+    // Explicitly return undefined for successful auth
+    return undefined;
+  },
+});
 
 /**
  * Require teamer role middleware
  */
-export const requireTeamer = new Elysia({ name: 'requireTeamer' })
-  .use(requireAuth)
-  .guard({
-    async beforeHandle({ participant, workshopGroup, set }) {
-      if (!participant || !workshopGroup) {
-        set.status = 401;
-        return { error: 'Authentication required' };
-      }
-
-      const role = await SessionService.getParticipantRole(
-        participant.id,
-        workshopGroup.id
-      );
-
-      if (role !== 'teamer') {
-        set.status = 403;
-        return { error: 'Teamer access required' };
-      }
+export const requireTeamer = new Elysia({ name: 'requireTeamer' }).use(requireAuth).guard({
+  async beforeHandle(context: any) {
+    const { participant, workshopGroup, set } = context;
+    if (!participant || !workshopGroup) {
+      set.status = 401;
+      return { error: 'Authentication required' };
     }
-  });
+
+    const role = await SessionService.getParticipantRole(participant.id, workshopGroup.id);
+
+    if (role !== 'teamer') {
+      set.status = 403;
+      return { error: 'Teamer access required' };
+    }
+
+    // Explicitly return undefined for successful auth
+    return undefined;
+  },
+});
 
 /**
  * Login helper functions
@@ -117,7 +116,7 @@ export class SessionHelpers {
       secure: env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge,
-      path: '/'
+      path: '/',
     };
   }
 
@@ -128,7 +127,7 @@ export class SessionHelpers {
     cookie['session_token'] = {
       value: '',
       maxAge: 0,
-      path: '/'
+      path: '/',
     };
   }
 
@@ -138,7 +137,7 @@ export class SessionHelpers {
   static getDeviceInfo(headers: Record<string, string | undefined>): string {
     const userAgent = headers['user-agent'] || 'unknown';
     const acceptLanguage = headers['accept-language'] || '';
-    
+
     // Create a simple device fingerprint
     return `${userAgent.slice(0, 100)}-${acceptLanguage.slice(0, 20)}`;
   }
@@ -163,7 +162,7 @@ export class SessionHelpers {
         return {
           success: false,
           isMultiDevice: false,
-          error: 'Participant not authorized for this group'
+          error: 'Participant not authorized for this group',
         };
       }
 
@@ -184,7 +183,7 @@ export class SessionHelpers {
       return {
         success: false,
         isMultiDevice: false,
-        error: 'Login failed'
+        error: 'Login failed',
       };
     }
   }
@@ -212,7 +211,7 @@ export class SessionHelpers {
  */
 export const sessionRoutes = new Elysia({ name: 'sessionRoutes' })
   .use(sessionMiddleware)
-  
+
   // Login endpoint
   .post('/api/login', async ({ body, cookie, headers, set }) => {
     const { participantId, workshopGroupId } = body as {
@@ -240,29 +239,31 @@ export const sessionRoutes = new Elysia({ name: 'sessionRoutes' })
     return {
       success: true,
       isMultiDevice: result.isMultiDevice,
-      message: result.isMultiDevice 
+      message: result.isMultiDevice
         ? 'Logged in successfully (multi-device detected)'
-        : 'Logged in successfully'
+        : 'Logged in successfully',
     };
   })
 
   // Logout endpoint
-  .post('/api/logout', async ({ sessionToken, cookie, set }) => {
+  .post('/api/logout', async (context: any) => {
+    const { sessionToken, cookie, set } = context;
     if (!sessionToken) {
       set.status = 400;
       return { error: 'No active session' };
     }
 
     const success = await SessionHelpers.logoutParticipant(sessionToken, cookie);
-    
+
     return {
       success,
-      message: success ? 'Logged out successfully' : 'Logout failed'
+      message: success ? 'Logged out successfully' : 'Logout failed',
     };
   })
 
   // Session status endpoint
-  .get('/api/session', ({ participant, workshopGroup, isAuthenticated }) => {
+  .get('/api/session', (context: any) => {
+    const { participant, workshopGroup, isAuthenticated } = context;
     if (!isAuthenticated) {
       return { authenticated: false };
     }
@@ -270,16 +271,14 @@ export const sessionRoutes = new Elysia({ name: 'sessionRoutes' })
     return {
       authenticated: true,
       participant,
-      workshopGroup
+      workshopGroup,
     };
   })
 
   // Online participants endpoint
   .get('/api/groups/:groupId/online', async ({ params }) => {
-    const onlineParticipants = await SessionService.getOnlineParticipants(
-      params.groupId
-    );
-    
+    const onlineParticipants = await SessionService.getOnlineParticipants(params.groupId);
+
     return { onlineParticipants };
   })
 

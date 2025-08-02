@@ -6,7 +6,9 @@
 }
 
 /* Alpine.js Status Messages */
-.loading-message, .error-message, .multi-device-message {
+.loading-message,
+.error-message,
+.multi-device-message {
   padding: 1rem;
   border-radius: 8px;
   margin-bottom: 1.5rem;
@@ -113,11 +115,11 @@
   .participants {
     grid-template-columns: 1fr;
   }
-  
+
   .group-name {
     font-size: 1.5rem;
   }
-  
+
   .participant-btn {
     padding: 1.25rem;
   }

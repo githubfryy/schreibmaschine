@@ -11,18 +11,18 @@ const SchreibmaschineUtils = {
   setCookie(name, value, options = {}) {
     const defaults = {
       path: '/',
-      maxAge: 604800 // 7 days
+      maxAge: 604800, // 7 days
     };
-    
+
     const opts = { ...defaults, ...options };
     let cookieString = `${name}=${value}`;
-    
+
     Object.entries(opts).forEach(([key, val]) => {
       if (val !== undefined) {
         cookieString += `; ${key}=${val}`;
       }
     });
-    
+
     document.cookie = cookieString;
   },
 
@@ -31,7 +31,7 @@ const SchreibmaschineUtils = {
    */
   getCookie(name) {
     const cookies = document.cookie.split(';');
-    for (let cookie of cookies) {
+    for (const cookie of cookies) {
       const [cookieName, cookieValue] = cookie.trim().split('=');
       if (cookieName === name) {
         return cookieValue;
@@ -76,7 +76,7 @@ const SchreibmaschineUtils = {
       clearTimeout(timeout);
       timeout = setTimeout(later, wait);
     };
-  }
+  },
 };
 
 // Authentication helpers
@@ -89,16 +89,16 @@ const SchreibmaschineAuth = {
       const response = await fetch('/api/login', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           participantId,
-          workshopGroupId
-        })
+          workshopGroupId,
+        }),
       });
 
       const result = await response.json();
-      
+
       if (result.success) {
         // Start SSE connection after successful login
         SchreibmaschineSSE.connect(workshopGroupId);
@@ -127,21 +127,21 @@ const SchreibmaschineAuth = {
     try {
       // Disconnect SSE before logout
       SchreibmaschineSSE.disconnect();
-      
+
       const response = await fetch('/api/logout', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
-        }
+          'Content-Type': 'application/json',
+        },
       });
 
       const result = await response.json();
-      
+
       if (result.success) {
         SchreibmaschineUtils.removeCookie('schreibmaschine_session');
         window.location.href = '/';
       }
-      
+
       return result;
     } catch (error) {
       console.error('Logout error:', error);
@@ -158,7 +158,7 @@ const SchreibmaschineAuth = {
     try {
       const response = await fetch('/api/session');
       const result = await response.json();
-      
+
       if (result.authenticated) {
         // Start SSE connection if authenticated
         if (result.workshopGroup && !SchreibmaschineSSE.eventSource) {
@@ -167,7 +167,7 @@ const SchreibmaschineAuth = {
       } else {
         SchreibmaschineSSE.disconnect();
       }
-      
+
       return result;
     } catch (error) {
       console.error('Session check error:', error);
@@ -187,7 +187,7 @@ const SchreibmaschineAuth = {
    */
   getCurrentParticipantId() {
     return SchreibmaschineUtils.getCookie('schreibmaschine_session');
-  }
+  },
 };
 
 // Server-Sent Events (SSE) helpers
@@ -206,7 +206,7 @@ const SchreibmaschineSSE = {
     }
 
     console.log(`📡 Connecting to SSE for group ${workshopGroupId}`);
-    
+
     this.eventSource = new EventSource(`/api/groups/${workshopGroupId}/events`);
 
     this.eventSource.onopen = () => {
@@ -226,11 +226,11 @@ const SchreibmaschineSSE = {
 
     this.eventSource.onerror = (error) => {
       console.error('SSE connection error:', error);
-      
+
       if (this.reconnectAttempts < this.maxReconnectAttempts) {
         this.reconnectAttempts++;
-        const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
-        
+        const delay = this.reconnectDelay * 2 ** (this.reconnectAttempts - 1);
+
         console.log(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
         setTimeout(() => {
           this.connect(workshopGroupId);
@@ -264,31 +264,33 @@ const SchreibmaschineSSE = {
       case 'connected':
         this.showToast('Verbunden mit Gruppe', 'success');
         break;
-        
+
       case 'online_status':
         this.handleOnlineStatus(event.data);
         break;
-        
+
       case 'activity_update':
         this.handleActivityUpdate(event.data);
         break;
-        
+
       case 'group_update':
         this.handleGroupUpdate(event.data);
         break;
-        
+
       case 'heartbeat':
         // Silent heartbeat
         break;
-        
+
       default:
         console.log('Unknown SSE event type:', event.type);
     }
 
     // Emit custom DOM event for other parts of the app to listen to
-    document.dispatchEvent(new CustomEvent('sse-event', {
-      detail: event
-    }));
+    document.dispatchEvent(
+      new CustomEvent('sse-event', {
+        detail: event,
+      })
+    );
   },
 
   /**
@@ -299,9 +301,9 @@ const SchreibmaschineSSE = {
     const onlineElement = document.getElementById('online-participants');
     if (onlineElement) {
       const participantsList = data.online_participants
-        .map(p => `<span class="participant online">${p.display_name}</span>`)
+        .map((p) => `<span class="participant online">${p.display_name}</span>`)
         .join('');
-      
+
       onlineElement.innerHTML = `
         <h3>Online (${data.total_online})</h3>
         <div class="participants-list">${participantsList}</div>
@@ -321,7 +323,7 @@ const SchreibmaschineSSE = {
    */
   handleActivityUpdate(data) {
     this.showToast(`Aktivität aktualisiert: ${data.status}`, 'info');
-    
+
     // Refresh activity display if needed
     const activityElement = document.getElementById(`activity-${data.activity_id}`);
     if (activityElement) {
@@ -366,19 +368,19 @@ const SchreibmaschineSSE = {
       z-index: 10000;
       animation: slideIn 0.3s ease-out;
     `;
-    
+
     // Set background color based on type
     const colors = {
       success: '#28a745',
       error: '#dc3545',
       info: '#17a2b8',
-      warning: '#ffc107'
+      warning: '#ffc107',
     };
     toast.style.backgroundColor = colors[type] || colors.info;
-    
+
     // Add to page
     document.body.appendChild(toast);
-    
+
     // Auto-remove after 3 seconds
     setTimeout(() => {
       if (toast.parentNode) {
@@ -390,7 +392,7 @@ const SchreibmaschineSSE = {
         }, 300);
       }
     }, 3000);
-  }
+  },
 };
 
 // Activity helpers
@@ -401,25 +403,25 @@ const SchreibmaschineActivity = {
   saveIndividualText() {
     const textarea = document.getElementById('individual-text');
     if (!textarea) return;
-    
+
     const text = textarea.value;
     const wordCount = SchreibmaschineUtils.countWords(text);
-    
+
     // Update word count display
     const wordCountElement = document.getElementById('word-count');
     if (wordCountElement) {
       wordCountElement.textContent = wordCount;
     }
-    
+
     // TODO: Save to server via API
     console.log('Saving individual text:', { text, wordCount });
-    
+
     // Show temporary feedback
     const button = event.target;
     const originalText = button.textContent;
     button.textContent = '💾 Gespeichert!';
     button.disabled = true;
-    
+
     setTimeout(() => {
       button.textContent = originalText;
       button.disabled = false;
@@ -432,19 +434,19 @@ const SchreibmaschineActivity = {
   exportText() {
     const textarea = document.getElementById('individual-text');
     if (!textarea) return;
-    
+
     const text = textarea.value;
     const timestamp = new Date().toISOString().slice(0, 19).replace('T', '_');
     const filename = `schreibmaschine_text_${timestamp}.txt`;
-    
+
     const blob = new Blob([text], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
-    
+
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;
     a.click();
-    
+
     URL.revokeObjectURL(url);
   },
 
@@ -454,13 +456,13 @@ const SchreibmaschineActivity = {
   submitRhyme() {
     const input = document.getElementById('rhyme-input');
     if (!input) return;
-    
+
     const rhyme = input.value.trim();
     if (!rhyme) return;
-    
+
     // TODO: Submit to server via API
     console.log('Submitting rhyme:', rhyme);
-    
+
     // Clear input and show feedback
     input.value = '';
     input.placeholder = 'Reim gesendet, warte auf andere...';
@@ -473,11 +475,11 @@ const SchreibmaschineActivity = {
   markDrawingComplete() {
     // TODO: Submit completion to server
     console.log('Marking drawing as complete');
-    
+
     const button = event.target;
     button.textContent = '✅ Fertig gemeldet!';
     button.disabled = true;
-  }
+  },
 };
 
 // Auto-update word count for textareas
@@ -491,7 +493,7 @@ document.addEventListener('DOMContentLoaded', () => {
         wordCountElement.textContent = wordCount;
       }
     }, 300);
-    
+
     textarea.addEventListener('input', updateWordCount);
     updateWordCount(); // Initial count
   }

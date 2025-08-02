@@ -1,4 +1,4 @@
-import { Database } from 'bun:sqlite';
+import type { Database } from 'bun:sqlite';
 import db from '../config/database';
 import type { Document } from '../types/database';
 import { generateShortId } from '../utils/crypto';
@@ -26,9 +26,9 @@ export class DocumentService {
       ${activityId ? 'AND activity_id = ?' : 'AND activity_id IS NULL'}
     `);
 
-    const existingDoc = activityId 
-      ? existingQuery.get(participantId, groupId, activityId) as {id: string} | null
-      : existingQuery.get(participantId, groupId) as {id: string} | null;
+    const existingDoc = activityId
+      ? (existingQuery.get(participantId, groupId, activityId) as { id: string } | null)
+      : (existingQuery.get(participantId, groupId) as { id: string } | null);
 
     if (existingDoc) {
       // Update existing document
@@ -38,11 +38,11 @@ export class DocumentService {
         WHERE id = ?
       `);
       updateQuery.run(content, existingDoc.id);
-      
-      return await this.getDocumentById(existingDoc.id) as Document;
+
+      return (await this.getDocumentById(existingDoc.id)) as Document;
     } else {
       // Create new document
-      const documentId = generateShortId(12);
+      const documentId = generateShortId();
       const insertQuery = this.db.query(`
         INSERT INTO documents (
           id, workshop_group_id, participant_id, activity_id,
@@ -58,26 +58,30 @@ export class DocumentService {
         'individual',
         content,
         null, // No Loro state for individual docs
-        1,
+        1
       );
 
-      return await this.getDocumentById(documentId) as Document;
+      return (await this.getDocumentById(documentId)) as Document;
     }
   }
 
   /**
    * Get individual document for participant
    */
-  async getIndividualDocument(participantId: string, groupId: string, activityId?: string): Promise<Document | null> {
+  async getIndividualDocument(
+    participantId: string,
+    groupId: string,
+    activityId?: string
+  ): Promise<Document | null> {
     const query = this.db.query(`
       SELECT * FROM documents 
       WHERE participant_id = ? AND workshop_group_id = ? AND type = 'individual'
       ${activityId ? 'AND activity_id = ?' : 'AND activity_id IS NULL'}
     `);
 
-    const result = activityId 
-      ? query.get(participantId, groupId, activityId) as Document | null
-      : query.get(participantId, groupId) as Document | null;
+    const result = activityId
+      ? (query.get(participantId, groupId, activityId) as Document | null)
+      : (query.get(participantId, groupId) as Document | null);
 
     return result;
   }
@@ -106,7 +110,7 @@ export class DocumentService {
       SELECT 1 FROM group_participants 
       WHERE workshop_group_id = ? AND participant_id = ?
     `);
-    
+
     return !!accessQuery.get(document.workshop_group_id, participantId);
   }
 
@@ -118,7 +122,7 @@ export class DocumentService {
     participantId: string,
     operations: any[],
     baseVersion: number
-  ): Promise<{success: boolean, newVersion: number, conflicts?: any[]}> {
+  ): Promise<{ success: boolean; newVersion: number; conflicts?: any[] }> {
     const document = await this.getDocumentById(documentId);
     if (!document) {
       throw new Error('Document not found');
@@ -126,13 +130,13 @@ export class DocumentService {
 
     // For now, we'll implement a simple version-based approach
     // In the future, this would integrate with Loro CRDT
-    
+
     if (document.version !== baseVersion) {
       // Version conflict - would need to merge with Loro
       return {
         success: false,
         newVersion: document.version,
-        conflicts: ['Version mismatch - document was modified by another user']
+        conflicts: ['Version mismatch - document was modified by another user'],
       };
     }
 
@@ -142,7 +146,7 @@ export class DocumentService {
       operations,
       version: newVersion,
       timestamp: new Date().toISOString(),
-      participant: participantId
+      participant: participantId,
     });
 
     const updateQuery = this.db.query(`
@@ -166,14 +170,17 @@ export class DocumentService {
 
     return {
       success: true,
-      newVersion
+      newVersion,
     };
   }
 
   /**
    * Export group documents in various formats
    */
-  async exportGroupDocuments(groupId: string, format: 'markdown' | 'html' | 'json'): Promise<string> {
+  async exportGroupDocuments(
+    groupId: string,
+    format: 'markdown' | 'html' | 'json'
+  ): Promise<string> {
     const documentsQuery = this.db.query(`
       SELECT d.*, p.display_name, a.name as activity_name
       FROM documents d
@@ -183,21 +190,23 @@ export class DocumentService {
       ORDER BY d.created_at
     `);
 
-    const documents = documentsQuery.all(groupId) as Array<Document & {
-      display_name: string,
-      activity_name: string
-    }>;
+    const documents = documentsQuery.all(groupId) as Array<
+      Document & {
+        display_name: string;
+        activity_name: string;
+      }
+    >;
 
     switch (format) {
       case 'markdown':
         return this.exportAsMarkdown(documents);
-      
+
       case 'html':
         return this.exportAsHTML(documents);
-      
+
       case 'json':
         return JSON.stringify(documents, null, 2);
-      
+
       default:
         throw new Error('Unsupported export format');
     }
@@ -213,8 +222,8 @@ export class DocumentService {
       FROM activities a
       WHERE a.id = ?
     `);
-    const activity = activityQuery.get(activityId) as {workshop_group_id: string} | null;
-    
+    const activity = activityQuery.get(activityId) as { workshop_group_id: string } | null;
+
     if (!activity) {
       throw new Error('Activity not found');
     }
@@ -224,7 +233,7 @@ export class DocumentService {
       WHERE workshop_group_id = ? AND participant_id = ? AND role = 'teamer'
     `);
     const isTeamer = !!teamerQuery.get(activity.workshop_group_id, requesterId);
-    
+
     if (!isTeamer) {
       throw new Error('Only teamers can view all activity documents');
     }
@@ -257,7 +266,7 @@ export class DocumentService {
       SELECT 1 FROM group_participants 
       WHERE workshop_group_id = ? AND participant_id = ? AND role = 'teamer'
     `);
-    
+
     return !!teamerQuery.get(document.workshop_group_id, participantId);
   }
 
@@ -265,8 +274,11 @@ export class DocumentService {
    * Delete document
    */
   async deleteDocument(documentId: string): Promise<void> {
-    const document = await this.getDocumentById(documentId);
-    
+    const existingDocument = await this.getDocumentById(documentId);
+    if (!existingDocument) {
+      throw new Error('Document not found');
+    }
+
     const deleteQuery = this.db.query('DELETE FROM documents WHERE id = ?');
     deleteQuery.run(documentId);
 
@@ -286,9 +298,11 @@ export class DocumentService {
     return query.get(documentId) as Document | null;
   }
 
-  private exportAsMarkdown(documents: Array<Document & {display_name: string, activity_name: string}>): string {
+  private exportAsMarkdown(
+    documents: Array<Document & { display_name: string; activity_name: string }>
+  ): string {
     let markdown = '# Schreibgruppe Export\n\n';
-    
+
     for (const doc of documents) {
       markdown += `## ${doc.display_name}${doc.activity_name ? ` - ${doc.activity_name}` : ''}\n\n`;
       markdown += `*${doc.type === 'individual' ? 'Individueller Text' : 'Kollaborativer Text'}*\n\n`;
@@ -299,7 +313,9 @@ export class DocumentService {
     return markdown;
   }
 
-  private exportAsHTML(documents: Array<Document & {display_name: string, activity_name: string}>): string {
+  private exportAsHTML(
+    documents: Array<Document & { display_name: string; activity_name: string }>
+  ): string {
     let html = `
 <!DOCTYPE html>
 <html lang="de">

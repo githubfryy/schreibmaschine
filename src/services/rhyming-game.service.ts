@@ -1,6 +1,5 @@
-import { Database } from 'bun:sqlite';
+import type { Database } from 'bun:sqlite';
 import db from '../config/database';
-import type { ActivityTurn, Participant } from '../types/database';
 import { generateShortId } from '../utils/crypto';
 
 /**
@@ -19,8 +18,8 @@ export class RhymingGameService {
    * Creates papers for circulation and sets up turn order
    */
   async initializeGame(activityId: string): Promise<{
-    papers: Array<{ paperId: string, startingParticipant: string }>,
-    turnOrder: string[]
+    papers: Array<{ paperId: string; startingParticipant: string }>;
+    turnOrder: string[];
   }> {
     // Get all participants in the activity
     const participantsQuery = this.db.query(`
@@ -30,10 +29,10 @@ export class RhymingGameService {
       WHERE ap.activity_id = ?
       ORDER BY ap.created_at
     `);
-    
+
     const participants = participantsQuery.all(activityId) as Array<{
-      participant_id: string,
-      display_name: string
+      participant_id: string;
+      display_name: string;
     }>;
 
     if (participants.length === 0) {
@@ -41,17 +40,17 @@ export class RhymingGameService {
     }
 
     // Create papers (one per participant)
-    const papers: Array<{ paperId: string, startingParticipant: string }> = [];
-    
+    const papers: Array<{ paperId: string; startingParticipant: string }> = [];
+
     for (const participant of participants) {
-      const paperId = generateShortId(6);
+      const paperId = generateShortId();
       papers.push({
         paperId,
-        startingParticipant: participant.participant_id
+        startingParticipant: participant.participant_id,
       });
 
       // Create the initial turn entry for this paper
-      const initialTurnId = generateShortId(8);
+      const initialTurnId = generateShortId();
       const insertTurnQuery = this.db.query(`
         INSERT INTO activity_turns (
           id, activity_id, participant_id, turn_number, 
@@ -72,26 +71,29 @@ export class RhymingGameService {
 
     return {
       papers,
-      turnOrder: participants.map(p => p.participant_id)
+      turnOrder: participants.map((p) => p.participant_id),
     };
   }
 
   /**
    * Get current game state for a participant
    */
-  async getGameState(activityId: string, participantId: string): Promise<{
-    isMyTurn: boolean,
+  async getGameState(
+    activityId: string,
+    participantId: string
+  ): Promise<{
+    isMyTurn: boolean;
     currentPaper?: {
-      paperId: string,
-      previousLine: string | null,
-      turnNumber: number
-    },
-    waitingFor?: string,
+      paperId: string;
+      previousLine: string | null;
+      turnNumber: number;
+    };
+    waitingFor?: string;
     myPapers: Array<{
-      paperId: string,
-      isComplete: boolean,
-      totalTurns: number
-    }>
+      paperId: string;
+      isComplete: boolean;
+      totalTurns: number;
+    }>;
   }> {
     // Get all participants and their order
     const participantsQuery = this.db.query(`
@@ -101,15 +103,15 @@ export class RhymingGameService {
       WHERE ap.activity_id = ?
       ORDER BY ap.created_at
     `);
-    
+
     const participants = participantsQuery.all(activityId) as Array<{
-      participant_id: string,
-      display_name: string
+      participant_id: string;
+      display_name: string;
     }>;
 
-    const participantOrder = participants.map(p => p.participant_id);
+    const participantOrder = participants.map((p) => p.participant_id);
     const currentParticipantIndex = participantOrder.indexOf(participantId);
-    
+
     if (currentParticipantIndex === -1) {
       throw new Error('Participant not found in activity');
     }
@@ -127,10 +129,10 @@ export class RhymingGameService {
     `);
 
     const paperStates = currentPaperQuery.all(activityId) as Array<{
-      paper_id: string,
-      turn_number: number,
-      max_turn: number,
-      total_turns: number
+      paper_id: string;
+      turn_number: number;
+      max_turn: number;
+      total_turns: number;
     }>;
 
     // Check which paper should be with this participant
@@ -152,20 +154,22 @@ export class RhymingGameService {
         `);
 
         const previousLineResult = previousLineQuery.get(
-          activityId, 
-          paperState.paper_id, 
+          activityId,
+          paperState.paper_id,
           paperState.max_turn
         ) as { content: string } | null;
 
         currentPaper = {
           paperId: paperState.paper_id,
           previousLine: previousLineResult?.content || null,
-          turnNumber: paperState.max_turn + 1
+          turnNumber: paperState.max_turn + 1,
         };
         break;
       } else {
         // Find who this paper is waiting for
-        const waitingParticipant = participants.find(p => p.participant_id === currentTurnParticipant);
+        const waitingParticipant = participants.find(
+          (p) => p.participant_id === currentTurnParticipant
+        );
         if (waitingParticipant) {
           waitingFor = waitingParticipant.display_name;
         }
@@ -191,25 +195,25 @@ export class RhymingGameService {
     `);
 
     const myPapers = myPapersQuery.all(
-      totalParticipants, 
-      activityId, 
-      activityId, 
+      totalParticipants,
+      activityId,
+      activityId,
       participantId
     ) as Array<{
-      paper_id: string,
-      total_turns: number,
-      is_complete: number
+      paper_id: string;
+      total_turns: number;
+      is_complete: number;
     }>;
 
     return {
       isMyTurn: currentPaper !== null,
-      currentPaper,
-      waitingFor,
-      myPapers: myPapers.map(paper => ({
+      currentPaper: currentPaper || { paperId: '', previousLine: null, turnNumber: 0 },
+      waitingFor: waitingFor || '',
+      myPapers: myPapers.map((paper) => ({
         paperId: paper.paper_id,
         isComplete: paper.is_complete === 1,
-        totalTurns: paper.total_turns
-      }))
+        totalTurns: paper.total_turns,
+      })),
     };
   }
 
@@ -217,20 +221,20 @@ export class RhymingGameService {
    * Submit a line for the rhyming game
    */
   async submitLine(
-    activityId: string, 
-    participantId: string, 
-    paperId: string, 
+    activityId: string,
+    participantId: string,
+    paperId: string,
     content: string
-  ): Promise<{ success: boolean, nextParticipant?: string }> {
+  ): Promise<{ success: boolean; nextParticipant?: string }> {
     // Verify it's actually this participant's turn for this paper
     const gameState = await this.getGameState(activityId, participantId);
-    
+
     if (!gameState.isMyTurn || gameState.currentPaper?.paperId !== paperId) {
       throw new Error('Not your turn for this paper');
     }
 
     // Create the turn entry
-    const turnId = generateShortId(8);
+    const turnId = generateShortId();
     const insertTurnQuery = this.db.query(`
       INSERT INTO activity_turns (
         id, activity_id, participant_id, turn_number, 
@@ -254,16 +258,16 @@ export class RhymingGameService {
       WHERE activity_id = ? 
       ORDER BY created_at
     `);
-    
+
     const participants = participantsQuery.all(activityId) as Array<{ participant_id: string }>;
-    const participantOrder = participants.map(p => p.participant_id);
+    const participantOrder = participants.map((p) => p.participant_id);
     const currentIndex = participantOrder.indexOf(participantId);
     const nextIndex = (currentIndex + 1) % participantOrder.length;
     const nextParticipant = participantOrder[nextIndex];
 
     return {
       success: true,
-      nextParticipant
+      ...(nextParticipant && { nextParticipant }),
     };
   }
 
@@ -271,19 +275,19 @@ export class RhymingGameService {
    * Skip turn for a paper
    */
   async skipTurn(
-    activityId: string, 
-    participantId: string, 
+    activityId: string,
+    participantId: string,
     paperId: string
-  ): Promise<{ success: boolean, nextParticipant?: string }> {
+  ): Promise<{ success: boolean; nextParticipant?: string }> {
     // Verify it's actually this participant's turn
     const gameState = await this.getGameState(activityId, participantId);
-    
+
     if (!gameState.isMyTurn || gameState.currentPaper?.paperId !== paperId) {
       throw new Error('Not your turn for this paper');
     }
 
     // Create skip turn entry
-    const turnId = generateShortId(8);
+    const turnId = generateShortId();
     const insertTurnQuery = this.db.query(`
       INSERT INTO activity_turns (
         id, activity_id, participant_id, turn_number, 
@@ -295,7 +299,7 @@ export class RhymingGameService {
       turnId,
       activityId,
       participantId,
-      gameState.currentPaper!.turnNumber,
+      gameState.currentPaper?.turnNumber,
       paperId,
       'SKIP',
       1
@@ -307,32 +311,34 @@ export class RhymingGameService {
       WHERE activity_id = ? 
       ORDER BY created_at
     `);
-    
+
     const participants = participantsQuery.all(activityId) as Array<{ participant_id: string }>;
-    const participantOrder = participants.map(p => p.participant_id);
+    const participantOrder = participants.map((p) => p.participant_id);
     const currentIndex = participantOrder.indexOf(participantId);
     const nextIndex = (currentIndex + 1) % participantOrder.length;
     const nextParticipant = participantOrder[nextIndex];
 
     return {
       success: true,
-      nextParticipant
+      ...(nextParticipant && { nextParticipant }),
     };
   }
 
   /**
    * Get completed papers for viewing (admin/teamer only)
    */
-  async getCompletedPapers(activityId: string): Promise<Array<{
-    paperId: string,
-    lines: Array<{
-      participantName: string,
-      content: string,
-      turnNumber: number,
-      isSkip: boolean,
-      createdAt: string
+  async getCompletedPapers(activityId: string): Promise<
+    Array<{
+      paperId: string;
+      lines: Array<{
+        participantName: string;
+        content: string;
+        turnNumber: number;
+        isSkip: boolean;
+        createdAt: string;
+      }>;
     }>
-  }>> {
+  > {
     const papersQuery = this.db.query(`
       SELECT DISTINCT 
         at.paper_id,
@@ -343,8 +349,8 @@ export class RhymingGameService {
     `);
 
     const papers = papersQuery.all(activityId) as Array<{
-      paper_id: string,
-      total_turns: number
+      paper_id: string;
+      total_turns: number;
     }>;
 
     const result = [];
@@ -364,22 +370,22 @@ export class RhymingGameService {
       `);
 
       const lines = linesQuery.all(activityId, paper.paper_id) as Array<{
-        content: string,
-        turn_number: number,
-        is_skip: number,
-        created_at: string,
-        participant_name: string
+        content: string;
+        turn_number: number;
+        is_skip: number;
+        created_at: string;
+        participant_name: string;
       }>;
 
       result.push({
         paperId: paper.paper_id,
-        lines: lines.map(line => ({
+        lines: lines.map((line) => ({
           participantName: line.participant_name || 'Unknown',
           content: line.content,
           turnNumber: line.turn_number,
           isSkip: line.is_skip === 1,
-          createdAt: line.created_at
-        }))
+          createdAt: line.created_at,
+        })),
       });
     }
 
@@ -393,7 +399,7 @@ export class RhymingGameService {
     const participantCountQuery = this.db.query(`
       SELECT COUNT(*) as count FROM activity_participants WHERE activity_id = ?
     `);
-    
+
     const participantCount = (participantCountQuery.get(activityId) as { count: number }).count;
 
     const paperCompletionQuery = this.db.query(`
@@ -407,15 +413,15 @@ export class RhymingGameService {
     `);
 
     const completedPapers = paperCompletionQuery.all(activityId, participantCount) as Array<{
-      paper_id: string,
-      turn_count: number
+      paper_id: string;
+      turn_count: number;
     }>;
 
     // Get total number of papers
     const totalPapersQuery = this.db.query(`
       SELECT COUNT(DISTINCT paper_id) as count FROM activity_turns WHERE activity_id = ?
     `);
-    
+
     const totalPapers = (totalPapersQuery.get(activityId) as { count: number }).count;
 
     return completedPapers.length === totalPapers;
