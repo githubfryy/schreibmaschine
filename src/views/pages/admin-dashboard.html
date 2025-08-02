@@ -1,0 +1,293 @@
+<!-- Admin Dashboard -->
+<div class="admin-container" x-data="adminDashboard()" x-init="init()">
+  
+  <!-- Admin Header -->
+  <div class="admin-header">
+    <div>
+      <h1>Admin Dashboard</h1>
+      <p class="subtitle">Schreibmaschine Verwaltung</p>
+    </div>
+    <div>
+      <button @click="logout()" class="btn-secondary">
+        🚪 Abmelden
+      </button>
+    </div>
+  </div>
+
+  <!-- Navigation -->
+  <div class="admin-nav">
+    <a href="#dashboard" @click="setActiveTab('dashboard')" 
+       :class="activeTab === 'dashboard' ? 'admin-nav-link active' : 'admin-nav-link'">
+      📊 Dashboard
+    </a>
+    <a href="#workshops" @click="setActiveTab('workshops')" 
+       :class="activeTab === 'workshops' ? 'admin-nav-link active' : 'admin-nav-link'">
+      📚 Workshops
+    </a>
+    <a href="#participants" @click="setActiveTab('participants')" 
+       :class="activeTab === 'participants' ? 'admin-nav-link active' : 'admin-nav-link'">
+      👥 Teilnehmer
+    </a>
+    <a href="#online" @click="setActiveTab('online')" 
+       :class="activeTab === 'online' ? 'admin-nav-link active' : 'admin-nav-link'">
+      🟢 Online Status
+    </a>
+  </div>
+
+  <!-- Dashboard Tab -->
+  <div x-show="activeTab === 'dashboard'" x-transition>
+    
+    <!-- Stats Cards -->
+    <div class="admin-stats">
+      <div class="stat-card">
+        <div class="stat-number" x-text="stats.totalWorkshops">{{totalWorkshops}}</div>
+        <div class="stat-label">Workshops</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" x-text="stats.totalParticipants">{{totalParticipants}}</div>
+        <div class="stat-label">Teilnehmer</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" x-text="stats.onlineParticipants">{{onlineParticipants}}</div>
+        <div class="stat-label">Online</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" x-text="stats.activeWorkshops || 0">0</div>
+        <div class="stat-label">Aktive Workshops</div>
+      </div>
+    </div>
+
+    <!-- Recent Activity Grid -->
+    <div class="admin-grid">
+      
+      <!-- Recent Workshops -->
+      <div class="admin-card">
+        <h3>📚 Aktuelle Workshops</h3>
+        <div x-show="workshops.length === 0" class="subtitle">Keine Workshops vorhanden</div>
+        <template x-for="workshop in workshops.slice(0, 5)" :key="workshop.id">
+          <div class="info" style="margin: 0.5rem 0; padding: 0.75rem;">
+            <h4 x-text="workshop.name"></h4>
+            <p class="subtitle" x-text="workshop.description"></p>
+            <div class="urls">
+              <div class="url" x-text="workshop.slug"></div>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <!-- Recent Participants -->
+      <div class="admin-card">
+        <h3>👥 Neue Teilnehmer</h3>
+        <div x-show="participants.length === 0" class="subtitle">Keine Teilnehmer vorhanden</div>
+        <template x-for="participant in participants.slice(0, 8)" :key="participant.id">
+          <div style="padding: 0.5rem 0; border-bottom: 1px solid #f3f4f6;">
+            <strong x-text="participant.display_name"></strong>
+            <span class="subtitle" x-text="participant.full_name"></span>
+          </div>
+        </template>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Workshops Tab -->
+  <div x-show="activeTab === 'workshops'" x-transition>
+    <div class="admin-card">
+      <h3>📚 Workshop-Verwaltung</h3>
+      
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Slug</th>
+            <th>Status</th>
+            <th>Beschreibung</th>
+            <th>Aktionen</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="workshop in workshops" :key="workshop.id">
+            <tr>
+              <td x-text="workshop.name"></td>
+              <td><code x-text="workshop.slug"></code></td>
+              <td>
+                <span :class="workshop.status === 'active' ? 'online-indicator' : 'offline-indicator'"></span>
+                <span x-text="workshop.status"></span>
+              </td>
+              <td x-text="workshop.description"></td>
+              <td>
+                <button class="btn-secondary" @click="viewWorkshop(workshop.id)">
+                  📄 Details
+                </button>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Participants Tab -->
+  <div x-show="activeTab === 'participants'" x-transition>
+    <div class="admin-card">
+      <h3>👥 Teilnehmer-Verwaltung</h3>
+      
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Anzeigename</th>
+            <th>Vollständiger Name</th>
+            <th>ID</th>
+            <th>Aktionen</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="participant in participants" :key="participant.id">
+            <tr>
+              <td><strong x-text="participant.display_name"></strong></td>
+              <td x-text="participant.full_name"></td>
+              <td><code x-text="participant.id.slice(0, 8)"></code></td>
+              <td>
+                <button class="btn-secondary" @click="viewParticipant(participant.id)">
+                  📄 Details
+                </button>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Online Status Tab -->
+  <div x-show="activeTab === 'online'" x-transition>
+    <div class="admin-card">
+      <h3>🟢 Online-Status Monitoring</h3>
+      <p class="subtitle">Aktualisiert sich automatisch alle 30 Sekunden</p>
+      
+      <div x-show="onlineParticipants.length === 0" class="info">
+        <p>🔇 Keine Teilnehmer online</p>
+      </div>
+
+      <template x-for="online in onlineParticipants" :key="online.sessionToken">
+        <div class="status" style="margin: 1rem 0;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <span class="online-indicator"></span>
+              <strong x-text="online.participant.display_name"></strong>
+              <span class="subtitle" x-text="online.participant.full_name"></span>
+            </div>
+            <div class="subtitle">
+              <span x-text="online.workshopGroup.name"></span> •
+              <span x-text="formatTime(online.lastActivity)"></span>
+            </div>
+          </div>
+          <div class="urls">
+            <div class="url" x-text="online.workshopGroup.slug"></div>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function adminDashboard() {
+  return {
+    activeTab: 'dashboard',
+    stats: {
+      totalWorkshops: {{totalWorkshops}},
+      totalParticipants: {{totalParticipants}},
+      onlineParticipants: {{onlineParticipants}},
+      activeWorkshops: 0
+    },
+    workshops: {{{JSON.stringify workshops}}},
+    participants: {{{JSON.stringify recentParticipants}}},
+    onlineParticipants: {{{JSON.stringify onlineStats}}},
+    updateInterval: null,
+
+    init() {
+      this.loadStats();
+      this.startAutoUpdate();
+    },
+
+    setActiveTab(tab) {
+      this.activeTab = tab;
+      
+      // Load fresh data when switching tabs
+      if (tab === 'online') {
+        this.loadOnlineStatus();
+      }
+    },
+
+    async loadStats() {
+      try {
+        const response = await fetch('/admin/api/stats', { 
+          credentials: 'include' 
+        });
+        const data = await response.json();
+        this.stats = data;
+      } catch (error) {
+        console.error('Failed to load stats:', error);
+      }
+    },
+
+    async loadOnlineStatus() {
+      try {
+        const response = await fetch('/admin/api/online', { 
+          credentials: 'include' 
+        });
+        const data = await response.json();
+        this.onlineParticipants = data.onlineParticipants;
+        this.stats.onlineParticipants = data.onlineParticipants.length;
+      } catch (error) {
+        console.error('Failed to load online status:', error);
+      }
+    },
+
+    startAutoUpdate() {
+      // Update online status every 30 seconds
+      this.updateInterval = setInterval(() => {
+        this.loadOnlineStatus();
+      }, 30000);
+    },
+
+    async logout() {
+      try {
+        const response = await fetch('/admin/logout', {
+          method: 'POST',
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          window.location.href = '/admin';
+        }
+      } catch (error) {
+        console.error('Logout failed:', error);
+      }
+    },
+
+    viewWorkshop(id) {
+      // TODO: Implement workshop detail view
+      alert(`Workshop Details: ${id}`);
+    },
+
+    viewParticipant(id) {
+      // TODO: Implement participant detail view
+      alert(`Participant Details: ${id}`);
+    },
+
+    formatTime(timestamp) {
+      const date = new Date(timestamp);
+      const now = new Date();
+      const diff = now - date;
+      
+      if (diff < 60000) return 'vor wenigen Sekunden';
+      if (diff < 3600000) return `vor ${Math.floor(diff / 60000)} Min`;
+      if (diff < 86400000) return `vor ${Math.floor(diff / 3600000)} Std`;
+      return date.toLocaleDateString('de-DE');
+    }
+  };
+}
+</script>

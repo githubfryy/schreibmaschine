@@ -43,6 +43,15 @@ export function generateSessionToken(): string {
 }
 
 /**
+ * Generate a secure token for admin sessions
+ */
+export function generateSecureToken(): string {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+/**
  * Simple hash function for non-cryptographic purposes
  * Useful for creating deterministic IDs from strings
  */

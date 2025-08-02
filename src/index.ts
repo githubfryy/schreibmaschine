@@ -5,12 +5,10 @@ import { Elysia } from 'elysia';
 import { env, isDevelopment } from '@/config/env';
 import { sessionRoutes } from '@/middleware/session';
 import { apiRoutes } from '@/routes/api';
+import { adminRoutes } from '@/routes/admin';
 import { groupRoutes } from '@/routes/groups';
 import { sseRoutes } from '@/routes/sse';
 import { TemplateService } from '@/services/template.service';
-
-// TODO: Import remaining route handlers when implemented
-// import { adminRoutes } from '@/routes/admin';
 
 // TODO: Import middleware when implemented
 // import { authMiddleware } from '@/middleware/auth';
@@ -100,10 +98,10 @@ const app = new Elysia()
   .use(sseRoutes)
 
   // Mount group routes (handles workshop group URLs and lobby)
-  .use(groupRoutes);
+  .use(groupRoutes)
 
-// TODO: Add remaining route groups when implemented
-// .group('/admin', (app) => app.use(adminRoutes))
+  // Mount admin routes (password-protected administration)
+  .use(adminRoutes);
 
 // For development, let Bun handle the server startup
 export type App = typeof app;

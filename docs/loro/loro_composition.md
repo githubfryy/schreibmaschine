@@ -1,0 +1,4 @@
+In Loro, you can build complex data structures using basic CRDTs such as List, MovableList, Map and Tree. These containers can include sub-containers, which in turn can contain more sub-containers, allowing for the composition of intricate data structures.
+It's important to note that documents in Loro must adhere to a tree structure. This means that while a parent can have multiple children, each child is restricted to only one parent. Therefore, the document forms a tree rather than a graph (like a DAG).
+By leveraging these fundamental CRDTs, you can effectively model the states and the updates of documents that conform to the JSON schema.
+[Text](https://loro.dev/docs/tutorial/text "Text")[List and Movable List](https://loro.dev/docs/tutorial/list "List and Movable List")
