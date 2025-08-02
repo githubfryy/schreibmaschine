@@ -257,29 +257,29 @@
   .admin-container {
     padding: 1rem;
   }
-  
+
   .admin-header {
     flex-direction: column;
     gap: 1rem;
     text-align: center;
   }
-  
+
   .admin-nav {
     flex-direction: column;
   }
-  
+
   .admin-stats {
     flex-direction: column;
   }
-  
+
   .admin-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .admin-login-container {
     padding: 1rem;
   }
-  
+
   .admin-login-form-container {
     max-width: none;
   }

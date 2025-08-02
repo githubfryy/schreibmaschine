@@ -4,8 +4,8 @@ import { Elysia } from 'elysia';
 
 import { env, isDevelopment } from '@/config/env';
 import { sessionRoutes } from '@/middleware/session';
-import { apiRoutes } from '@/routes/api';
 import { adminRoutes } from '@/routes/admin';
+import { apiRoutes } from '@/routes/api';
 import { groupRoutes } from '@/routes/groups';
 import { sseRoutes } from '@/routes/sse';
 import { TemplateService } from '@/services/template.service';

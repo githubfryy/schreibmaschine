@@ -13,7 +13,11 @@ export class AdminService {
   /**
    * Authenticate admin with password
    */
-  static authenticateAdmin(password: string): { success: boolean; sessionToken?: string; error?: string } {
+  static authenticateAdmin(password: string): {
+    success: boolean;
+    sessionToken?: string;
+    error?: string;
+  } {
     if (!password || password !== env.ADMIN_PASSWORD) {
       return { success: false, error: 'Invalid admin password' };
     }
@@ -45,7 +49,7 @@ export class AdminService {
     }
 
     const now = Date.now();
-    
+
     // Check if session has expired
     if (now - session.createdAt > AdminService.ADMIN_SESSION_DURATION) {
       AdminService.activeSessions.delete(sessionToken);
@@ -88,7 +92,11 @@ export class AdminService {
   /**
    * Get admin session info
    */
-  static getAdminSessionInfo(sessionToken: string): { isValid: boolean; createdAt?: number; lastActivity?: number } {
+  static getAdminSessionInfo(sessionToken: string): {
+    isValid: boolean;
+    createdAt?: number;
+    lastActivity?: number;
+  } {
     if (!AdminService.validateAdminSession(sessionToken)) {
       return { isValid: false };
     }

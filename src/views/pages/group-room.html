@@ -50,7 +50,20 @@
         </div>
       </div>
       
-      <!-- Logout Button -->
+      <!-- Activity Management (Teamer Only) -->
+    <div x-show="isTeamer" class="teamer-controls">
+      <h2>🎯 Aktivitäten verwalten</h2>
+      <div class="teamer-actions">
+        <button x-on:click="createActivity()" class="btn btn-primary">
+          ➕ Neue Aktivität
+        </button>
+        <button x-show="currentActivity" x-on:click="toggleActivityStatus()" class="btn btn-secondary">
+          <span x-text="currentActivity?.status === 'active' ? '⏸️ Pausieren' : '▶️ Starten'"></span>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Logout Button -->
       <div class="logout-section">
         <button x-on:click="logout()" class="logout-btn">
           🚪 Abmelden
@@ -61,46 +74,108 @@
     <div class="content">
       <h2>✍️ Schreibraum</h2>
       
-      <div x-show="currentActivity" class="activity-area">
-        <h3 x-text="currentActivity?.name"></h3>
+      <div x-show="currentActivity" class="activity-area fade-in">
+        <div class="activity-header">
+          <h3 x-text="currentActivity?.name"></h3>
+          <span class="activity-type-badge" :class="currentActivity?.type" x-text="getActivityTypeLabel(currentActivity?.type)"></span>
+        </div>
+        
+        <!-- Individual Writing Pad -->
         <div x-show="currentActivity?.type === 'individual_pad'" class="individual-writing">
-          <textarea x-model="individualText" 
-                    placeholder="Hier kannst du schreiben..."
-                    rows="15"
-                    x-on:input.debounce.500ms="saveIndividualText()"></textarea>
-          <div class="writing-stats">
-            <span x-text="wordCount(individualText)"></span> Wörter • 
-            <span x-show="lastSaved">Zuletzt gespeichert: <span x-text="formatTime(lastSaved)"></span></span>
+          <div class="individual-editor">
+            <textarea x-model="individualText" 
+                      x-ref="individualTextarea"
+                      placeholder="Hier kannst du deine Gedanken und Ideen festhalten..."
+                      x-on:input.debounce.500ms="saveIndividualText()"
+                      x-on:focus="startWritingSession()"
+                      x-on:blur="endWritingSession()"></textarea>
+            <div class="writing-stats">
+              <div class="word-count">
+                <span x-text="wordCount(individualText)"></span> Wörter
+                <span x-show="characterCount(individualText) > 0"> • <span x-text="characterCount(individualText)"></span> Zeichen</span>
+              </div>
+              <div class="save-status" :class="saveStatus">
+                <span x-show="saveStatus === 'saving'">💾 Speichert...</span>
+                <span x-show="saveStatus === 'saved'">✅ Gespeichert</span>
+                <span x-show="saveStatus === 'error'">❌ Fehler beim Speichern</span>
+                <span x-show="lastSaved" class="last-saved">um <span x-text="formatTime(lastSaved)"></span></span>
+              </div>
+            </div>
           </div>
         </div>
         
+        <!-- Rhyming Chain Game -->
         <div x-show="currentActivity?.type === 'rhyming_chain'" class="rhyming-game">
-          <div x-show="isMyTurn" class="turn-active">
-            <p><strong>Du bist dran!</strong></p>
-            <p>Letzte Zeile: "<em x-text="previousLine"></em>"</p>
+          <div x-show="previousLine" class="previous-line">
+            <div class="previous-line-label">Vorherige Zeile</div>
+            <div x-text="previousLine"></div>
+          </div>
+          
+          <div x-show="isMyTurn" class="turn-status turn-active">
+            <h4>🎯 Du bist am Zug!</h4>
+            <p>Schreibe eine Zeile, die sich auf die vorherige reimt.</p>
+          </div>
+          
+          <div x-show="!isMyTurn" class="turn-status turn-waiting">
+            <h4>⏳ Warten auf <span class="current-player" x-text="currentPlayer"></span></h4>
+            <p>Du bist als nächstes dran, wenn <span x-text="currentPlayer"></span> fertig ist.</p>
+          </div>
+          
+          <div x-show="isMyTurn" class="rhyme-input-section">
             <input type="text" 
+                   class="rhyme-input"
                    x-model="currentRhyme" 
-                   placeholder="Schreibe eine passende Zeile..."
-                   x-on:keyup.enter="submitRhyme()">
+                   x-ref="rhymeInput"
+                   placeholder="Deine Zeile hier eingeben..."
+                   x-on:keyup.enter="submitRhyme()"
+                   maxlength="200">
             <div class="turn-actions">
-              <button x-on:click="submitRhyme()" :disabled="!currentRhyme.trim()">
+              <button x-on:click="submitRhyme()" 
+                      :disabled="!currentRhyme.trim()"
+                      class="btn-submit">
                 ✍️ Zeile senden
               </button>
-              <button x-on:click="skipTurn()" class="skip-btn">
-                ⏭️ Überspringen
+              <button x-on:click="skipTurn()" class="btn-skip">
+                ⏭️ Zug überspringen
               </button>
             </div>
           </div>
+        </div>
+        
+        <!-- Collaborative Writing Pad -->
+        <div x-show="currentActivity?.type === 'collaborative_pad'" class="collaborative-writing">
+          <div class="collaboration-header">
+            <h4>✍️ Gemeinsames Schreiben</h4>
+            <div class="active-editors">
+              <template x-for="editor in activeEditors" :key="editor.id">
+                <div class="editor-avatar" :style="{ backgroundColor: editor.color }" :title="editor.name">
+                  <span x-text="editor.name.charAt(0).toUpperCase()"></span>
+                </div>
+              </template>
+            </div>
+          </div>
           
-          <div x-show="!isMyTurn" class="turn-waiting">
-            <p><span x-text="currentPlayer"></span> ist dran...</p>
-            <p>Warte auf die nächste Runde.</p>
+          <div class="collaborative-editor" 
+               x-model="collaborativeText"
+               contenteditable="true"
+               x-on:input.debounce.300ms="saveCollaborativeText()"
+               placeholder="Hier können alle gemeinsam schreiben...">
+          </div>
+          
+          <div class="editing-permissions">
+            <span x-show="canEdit">Du kannst diesen Text bearbeiten</span>
+            <span x-show="!canEdit">Nur Anschauen erlaubt - Teamer kann Bearbeitung freischalten</span>
           </div>
         </div>
       </div>
       
       <div x-show="!currentActivity" class="welcome-message">
-        <p>Willkommen in der Schreibgruppe! Die Aktivitäten werden hier angezeigt, sobald sie vom Teamer gestartet werden.</p>
+        <div class="welcome-icon">✍️</div>
+        <h3>Willkommen im Schreibraum!</h3>
+        <p>Wähle eine Aktivität aus der Seitenleiste aus, um mit dem Schreiben zu beginnen.</p>
+        <p x-show="activities.length === 0" class="no-activities-hint">
+          <em>Noch keine Aktivitäten verfügbar. Der Teamer wird bald welche erstellen.</em>
+        </p>
       </div>
     </div>
   </div>
@@ -122,12 +197,22 @@ document.addEventListener('alpine:init', () => {
     // Individual writing
     individualText: Alpine.$persist('').as('individual-text-{{current_participant.id}}'),
     lastSaved: null,
+    saveStatus: 'saved', // 'saving', 'saved', 'error'
+    writingStartTime: null,
     
     // Rhyming game
     isMyTurn: false,
     currentRhyme: '',
     previousLine: '',
     currentPlayer: '',
+    
+    // Collaborative writing
+    collaborativeText: '',
+    activeEditors: [],
+    canEdit: false,
+    
+    // Teamer controls
+    isTeamer: false
     
     // Computed
     get onlineCount() {
@@ -154,10 +239,19 @@ document.addEventListener('alpine:init', () => {
       });
       
       // Load initial data
-      this.loadActivities();
+      await this.loadActivities();
+      await this.checkTeamerStatus();
       
       // Set up keyboard shortcuts
       this.setupKeyboardShortcuts();
+      
+      // Auto-focus on current activity if available
+      if (this.activities.length > 0) {
+        const activeActivity = this.activities.find(a => a.status === 'active');
+        if (activeActivity) {
+          this.selectActivity(activeActivity.id);
+        }
+      }
     },
     
     // Handle SSE events
@@ -193,17 +287,44 @@ document.addEventListener('alpine:init', () => {
         if (response.ok) {
           const data = await response.json();
           this.activities = data.activities || [];
+          
+          // Update current activity if it exists
+          if (this.currentActivity) {
+            const updated = this.activities.find(a => a.id === this.currentActivity.id);
+            if (updated) {
+              this.currentActivity = updated;
+            }
+          }
         }
       } catch (error) {
         console.error('Failed to load activities:', error);
       }
     },
     
+    async checkTeamerStatus() {
+      // Check if current participant is a teamer
+      const teamer = this.allParticipants.find(p => 
+        p.id === this.currentParticipantId && p.role === 'teamer'
+      );
+      this.isTeamer = !!teamer;
+    },
+    
     selectActivity(activityId) {
       const activity = this.activities.find(a => a.id === activityId);
-      if (activity && activity.status === 'active') {
+      if (activity) {
         this.currentActivity = activity;
         this.loadActivityState(activityId);
+        
+        // Focus appropriate input based on activity type
+        this.$nextTick(() => {
+          if (activity.type === 'individual_pad') {
+            const textarea = this.$refs.individualTextarea;
+            if (textarea) textarea.focus();
+          } else if (activity.type === 'rhyming_chain' && this.isMyTurn) {
+            const input = this.$refs.rhymeInput;
+            if (input) input.focus();
+          }
+        });
       }
     },
     
@@ -226,7 +347,12 @@ document.addEventListener('alpine:init', () => {
     
     // Individual writing
     async saveIndividualText() {
-      if (!this.individualText.trim()) return;
+      if (!this.individualText.trim()) {
+        this.saveStatus = 'saved';
+        return;
+      }
+      
+      this.saveStatus = 'saving';
       
       try {
         const response = await fetch('/api/documents/individual', {
@@ -234,16 +360,39 @@ document.addEventListener('alpine:init', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             groupId: this.groupId,
-            content: this.individualText
+            activityId: this.currentActivity?.id,
+            content: this.individualText,
+            metadata: {
+              wordCount: this.wordCount(this.individualText),
+              characterCount: this.characterCount(this.individualText),
+              writingSession: {
+                startTime: this.writingStartTime,
+                duration: this.writingStartTime ? Date.now() - this.writingStartTime : 0
+              }
+            }
           })
         });
         
         if (response.ok) {
           this.lastSaved = new Date();
+          this.saveStatus = 'saved';
+        } else {
+          this.saveStatus = 'error';
         }
       } catch (error) {
         console.error('Failed to save text:', error);
+        this.saveStatus = 'error';
       }
+    },
+    
+    startWritingSession() {
+      if (!this.writingStartTime) {
+        this.writingStartTime = Date.now();
+      }
+    },
+    
+    endWritingSession() {
+      // Session tracking for analytics (could be extended)
     },
     
     // Rhyming game
@@ -284,9 +433,13 @@ document.addEventListener('alpine:init', () => {
       }
     },
     
-    // Utilities
+    // Text utilities
     wordCount(text) {
       return text.trim() ? text.trim().split(/\s+/).length : 0;
+    },
+    
+    characterCount(text) {
+      return text.length;
     },
     
     formatTime(date) {
@@ -303,6 +456,50 @@ document.addEventListener('alpine:init', () => {
       return statusMap[status] || status;
     },
     
+    getActivityTypeLabel(type) {
+      const typeMap = {
+        'individual_pad': 'Einzelarbeit',
+        'collaborative_pad': 'Gemeinsam',
+        'rhyming_chain': 'Reimkette',
+        'paper_drawing': 'Zeichnung',
+        'timed_writing': 'Zeitschreiben'
+      };
+      return typeMap[type] || type;
+    },
+    
+    // Teamer controls
+    async createActivity() {
+      // This would open a modal or navigate to activity creation
+      // For now, just placeholder
+      alert('Aktivität erstellen - In Entwicklung');
+    },
+    
+    async toggleActivityStatus() {
+      if (!this.currentActivity) return;
+      
+      const newStatus = this.currentActivity.status === 'active' ? 'paused' : 'active';
+      
+      try {
+        const response = await fetch(`/api/activities/${this.currentActivity.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newStatus })
+        });
+        
+        if (response.ok) {
+          await this.loadActivities();
+        }
+      } catch (error) {
+        console.error('Failed to toggle activity status:', error);
+      }
+    },
+    
+    // Collaborative writing
+    async saveCollaborativeText() {
+      // Placeholder for collaborative text saving
+      console.log('Saving collaborative text:', this.collaborativeText);
+    },
+    
     // Logout
     async logout() {
       if (confirm('Möchtest du dich wirklich abmelden?')) {
@@ -313,9 +510,31 @@ document.addEventListener('alpine:init', () => {
     // Keyboard shortcuts
     setupKeyboardShortcuts() {
       document.addEventListener('keydown', (e) => {
+        // Global shortcuts
         if (e.ctrlKey && e.shiftKey && e.key === 'L') {
           e.preventDefault();
           this.logout();
+        }
+        
+        // Activity-specific shortcuts
+        if (this.currentActivity) {
+          if (e.ctrlKey && e.key === 's') {
+            e.preventDefault();
+            if (this.currentActivity.type === 'individual_pad') {
+              this.saveIndividualText();
+            }
+          }
+          
+          if (this.currentActivity.type === 'rhyming_chain' && this.isMyTurn) {
+            if (e.key === 'Enter' && e.ctrlKey) {
+              e.preventDefault();
+              this.submitRhyme();
+            }
+            if (e.key === 'Escape') {
+              e.preventDefault();
+              this.skipTurn();
+            }
+          }
         }
       });
     }

@@ -1,10 +1,10 @@
 import { Elysia } from 'elysia';
+import { env, isDevelopment } from '@/config/env';
 import { adminAuthRoutes, adminMiddleware, requireAdmin } from '@/middleware/admin';
-import { TemplateService } from '@/services/template.service';
-import { WorkshopService } from '@/services/workshop.service';
 import { ParticipantService } from '@/services/participant.service';
 import { SessionService } from '@/services/session.service';
-import { env, isDevelopment } from '@/config/env';
+import { TemplateService } from '@/services/template.service';
+import { WorkshopService } from '@/services/workshop.service';
 
 /**
  * Admin Routes
@@ -17,7 +17,7 @@ export const adminRoutes = new Elysia({ name: 'adminRoutes' })
   // Admin login page
   .get('/admin', (context: any) => {
     const { isAdminAuthenticated } = context;
-    
+
     if (isAdminAuthenticated) {
       // Already authenticated, redirect to dashboard
       return new Response(null, {
@@ -49,7 +49,7 @@ export const adminRoutes = new Elysia({ name: 'adminRoutes' })
   // Admin dashboard (requires authentication)
   .get('/admin/dashboard', async (context: any) => {
     const { isAdminAuthenticated } = context;
-    
+
     if (!isAdminAuthenticated) {
       return new Response(null, {
         status: 302,
@@ -76,17 +76,13 @@ export const adminRoutes = new Elysia({ name: 'adminRoutes' })
       onlineStats,
     };
 
-    const html = TemplateService.render(
-      'admin-dashboard',
-      dashboardData,
-      {
-        title: 'Admin Dashboard - Schreibmaschine',
-        showHeader: false,
-        showFooter: false,
-        additionalCSS: '/css/admin.css',
-        additionalJS: '/js/alpinejs/alpine.min.js',
-      }
-    );
+    const html = TemplateService.render('admin-dashboard', dashboardData, {
+      title: 'Admin Dashboard - Schreibmaschine',
+      showHeader: false,
+      showFooter: false,
+      additionalCSS: '/css/admin.css',
+      additionalJS: '/js/alpinejs/alpine.min.js',
+    });
 
     return new Response(html, {
       headers: { 'Content-Type': 'text/html; charset=utf-8' },
@@ -97,7 +93,7 @@ export const adminRoutes = new Elysia({ name: 'adminRoutes' })
   .group('/admin/api', (app) =>
     app
       .use(requireAdmin)
-      
+
       // Dashboard stats
       .get('/stats', async () => {
         const [workshopsResult, participantsResult, onlineStats] = await Promise.all([
@@ -156,7 +152,8 @@ export const adminRoutes = new Elysia({ name: 'adminRoutes' })
         status: 'ok',
         timestamp: new Date().toISOString(),
         environment: env.NODE_ENV,
-        adminSessionsActive: require('@/services/admin.service').AdminService.getActiveSessionCount(),
+        adminSessionsActive:
+          require('@/services/admin.service').AdminService.getActiveSessionCount(),
       }))
 
       // Debug endpoint (development only)
@@ -169,7 +166,7 @@ export const adminRoutes = new Elysia({ name: 'adminRoutes' })
           adminPasswordLength: env.ADMIN_PASSWORD?.length || 0,
           adminPasswordValue: isDevelopment ? env.ADMIN_PASSWORD : '[HIDDEN]',
           nodeEnv: env.NODE_ENV,
-          allEnvKeys: Object.keys(process.env).filter(key => key.startsWith('ADMIN')),
+          allEnvKeys: Object.keys(process.env).filter((key) => key.startsWith('ADMIN')),
         };
       })
   );

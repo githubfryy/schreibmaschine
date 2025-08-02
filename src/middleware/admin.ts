@@ -29,7 +29,7 @@ export const adminMiddleware = new Elysia({ name: 'admin' }).derive(async ({ coo
 
   // Validate and update admin session activity
   const sessionInfo = AdminService.getAdminSessionInfo(adminSessionToken);
-  
+
   if (!sessionInfo.isValid) {
     return {
       isAdminAuthenticated: false,
@@ -54,19 +54,17 @@ export const adminMiddleware = new Elysia({ name: 'admin' }).derive(async ({ coo
 /**
  * Require admin authentication middleware
  */
-export const requireAdmin = new Elysia({ name: 'requireAdmin' })
-  .use(adminMiddleware)
-  .guard({
-    beforeHandle(context: any) {
-      const { isAdminAuthenticated, set } = context;
-      if (!isAdminAuthenticated) {
-        set.status = 401;
-        return { error: 'Admin authentication required' };
-      }
-      // Explicitly return undefined for successful auth
-      return undefined;
-    },
-  });
+export const requireAdmin = new Elysia({ name: 'requireAdmin' }).use(adminMiddleware).guard({
+  beforeHandle(context: any) {
+    const { isAdminAuthenticated, set } = context;
+    if (!isAdminAuthenticated) {
+      set.status = 401;
+      return { error: 'Admin authentication required' };
+    }
+    // Explicitly return undefined for successful auth
+    return undefined;
+  },
+});
 
 /**
  * Admin helper functions
@@ -109,7 +107,7 @@ export class AdminHelpers {
     cookie: Record<string, any>
   ): { success: boolean; error?: string } {
     const result = AdminService.authenticateAdmin(password);
-    
+
     if (!result.success) {
       return { success: false, error: result.error || 'Authentication failed' };
     }
@@ -123,10 +121,7 @@ export class AdminHelpers {
   /**
    * Handle admin logout
    */
-  static logoutAdmin(
-    sessionToken: string,
-    cookie: Record<string, any>
-  ): boolean {
+  static logoutAdmin(sessionToken: string, cookie: Record<string, any>): boolean {
     const success = AdminService.logoutAdmin(sessionToken);
     AdminHelpers.clearAdminSessionCookie(cookie);
     return success;
@@ -164,7 +159,7 @@ export const adminAuthRoutes = new Elysia({ name: 'adminAuthRoutes' })
   // Admin logout endpoint
   .post('/admin/logout', async (context: any) => {
     const { adminSessionToken, cookie } = context;
-    
+
     if (!adminSessionToken) {
       return { success: true, message: 'No active admin session' };
     }
@@ -180,7 +175,7 @@ export const adminAuthRoutes = new Elysia({ name: 'adminAuthRoutes' })
   // Admin session status endpoint
   .get('/admin/session', (context: any) => {
     const { isAdminAuthenticated, adminSessionInfo } = context;
-    
+
     if (!isAdminAuthenticated) {
       return { authenticated: false };
     }

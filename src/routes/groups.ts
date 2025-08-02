@@ -6,6 +6,7 @@
  */
 
 import { Elysia, t } from 'elysia';
+import { ActivityService } from '@/services/activity.service';
 import { TemplateService } from '@/services/template.service';
 import { UrlService } from '@/services/url.service';
 import type { ApiError, ResolveUrlResponse } from '@/types/api';
@@ -293,7 +294,7 @@ export const groupRoutes = new Elysia()
             // TODO: Load real participants from database
             { display_name: 'Du (Teamer)', role: 'teamer', online: true, is_current_user: true },
           ],
-          activities: [], // TODO: Load activities from database
+          activities: await new ActivityService().getActivitiesForGroup(resolved.workshop_group.id),
           online_count: 1, // TODO: Get real online count
         };
 
