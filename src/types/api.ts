@@ -49,6 +49,71 @@ export interface ValidationError extends ApiError {
 }
 
 // ============================================================================
+// SERVER-SENT EVENTS
+// ============================================================================
+
+export interface SSEEvent {
+  id?: string;
+  type?: string;
+  data?: any;
+}
+
+export interface SSEConnectionEvent extends SSEEvent {
+  type: 'connected';
+  data: {
+    groupId: string;
+    participantId: string;
+  };
+}
+
+export interface SSEOnlineStatusEvent extends SSEEvent {
+  type: 'online_status';
+  data: {
+    online_participants: Array<{
+      participant_id: string;
+      last_seen: string;
+    }>;
+  };
+}
+
+export interface SSEActivityUpdateEvent extends SSEEvent {
+  type: 'activity_update';
+  data: {
+    activityId: string;
+    action: 'created' | 'updated' | 'deleted';
+    status?: string;
+  };
+}
+
+export interface SSETurnUpdateEvent extends SSEEvent {
+  type: 'turn_update';
+  data: {
+    activityId: string;
+    participantId: string;
+    action: 'submit' | 'skip';
+    content?: string;
+    turnNumber: number;
+  };
+}
+
+export interface SSEDocumentUpdateEvent extends SSEEvent {
+  type: 'document_update';
+  data: {
+    documentId: string;
+    participantId: string;
+    operations: any[];
+    newVersion: number;
+  };
+}
+
+export interface SSEHeartbeatEvent extends SSEEvent {
+  type: 'heartbeat';
+  data: {
+    timestamp: string;
+  };
+}
+
+// ============================================================================
 // WORKSHOP API
 // ============================================================================
 

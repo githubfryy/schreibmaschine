@@ -85,10 +85,11 @@ export interface Activity {
   workshop_group_id: string;
   name: string;
   type: ActivityType;
-  config: string | null; // JSON config
+  description?: string;
+  settings: string | null; // JSON settings
   status: 'setup' | 'active' | 'paused' | 'completed';
-  position: number;
-  time_limit_minutes: number | null;
+  max_participants?: number;
+  created_by: string;
   created_at: string;
   updated_at: string;
 }
@@ -109,9 +110,9 @@ export interface ActivityTurn {
   activity_id: string;
   participant_id: string | null; // NULL if skipped
   turn_number: number;
-  paper_id: string; // Which "paper" this turn is on
+  paper_id?: string; // Which "paper" this turn is on (for multi-paper games)
   content: string | null;
-  is_skipped: boolean;
+  is_skip: boolean;
   created_at: string;
 }
 
@@ -122,11 +123,13 @@ export interface Document {
   activity_id: string | null;
   participant_id: string | null;
   workshop_group_id: string;
-  title: string;
+  title?: string;
   type: DocumentType;
-  loro_doc_id: string;
+  content: string;
+  loro_state: string | null;
+  version: number;
   is_published: boolean;
-  export_as_markdown: boolean;
+  export_as_markdown?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -319,6 +322,34 @@ export interface CreateActivity {
   config?: ActivityConfig;
   time_limit_minutes?: number;
   participant_ids?: string[]; // Participants to add to activity
+}
+
+export interface CreateActivityData {
+  name: string;
+  type: ActivityType;
+  description?: string;
+  settings?: Record<string, any>;
+  max_participants?: number;
+  created_by: string;
+}
+
+export interface UpdateActivityData {
+  name?: string;
+  description?: string;
+  status?: 'setup' | 'active' | 'paused' | 'completed';
+  settings?: Record<string, any>;
+}
+
+export interface ActivityState {
+  activityId: string;
+  participantId: string;
+  isParticipant: boolean;
+  canParticipate: boolean;
+  isMyTurn: boolean;
+  currentPlayer: string | null;
+  previousLine: string | null;
+  turnOrder: string[];
+  myTurnNumber: number | null;
 }
 
 // ============================================================================

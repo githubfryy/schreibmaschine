@@ -1,4 +1,6 @@
-# Schreibmaschine App Structure
+# Schreibmaschine App Structure (Archive)
+
+*Note: This is an archived planning document. Current structure is documented in the main [CLAUDE.md](/CLAUDE.md)*
 
 ## Project Overview
 A local-first collaborative writing app built with modern TypeScript, Bun, and Elysia.js.

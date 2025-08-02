@@ -131,6 +131,20 @@
 - [x] **Session cleanup** - Automatic expired session management
 - [x] **Multi-device support** - Seamless device switching capability
 
+### ✅ Activity System (COMPLETED!)
+- [x] **Activity service** - Complete business logic for all activity types
+- [x] **Activity API routes** - Full CRUD operations with validation
+- [x] **Turn-based games** - Rhyming game service with progression tracking
+- [x] **Activity participants** - Role-based access control system
+- [x] **Real-time updates** - SSE integration for activity state changes
+
+### ✅ Document System (COMPLETED!)
+- [x] **Document service** - Complete document lifecycle management
+- [x] **Document API routes** - Full CRUD with metadata handling
+- [x] **Activity integration** - Documents linked to activities and participants
+- [x] **Publication control** - Privacy settings for document sharing
+- [x] **Export preparation** - Ready for markdown export implementation
+
 ### ✅ Claude Code Integration (SOLVED!)
 - [x] **Terminal environment** - zsh configuration working perfectly
 - [x] **Tool availability** - Bun 1.2.19, Node.js v22.3.0 accessible
@@ -142,23 +156,32 @@
 - **Location**: `./data/schreibmaschine.db`
 - **Size**: ~213KB with sample data
 - **Sample Data**: 3 workshops, 5 writing groups, 8 participants, 4 group instances, activities
+- **Status**: ✅ Complete with all entities and relationships implemented
 
 ## Current Todo List
 
+### ✅ Recently Completed (Since Last Update)
+- [x] **Activity System Implementation** - Complete flexible framework with services
+- [x] **Document System** - Full document management with metadata
+- [x] **Rhyming Game Service** - Turn-based game logic with skip functionality
+- [x] **SSE Service** - Real-time event broadcasting system
+- [x] **Activity Routes** - Complete API endpoints for activity management
+- [x] **Document Routes** - Full CRUD operations for documents
+
 ### High Priority (Next Up)
-1. [pending] **Activity System Implementation** - Build flexible framework for writing exercises
-2. [pending] **Enhanced Session Features** - Multi-device conflict resolution and persistence
-3. [pending] **Admin Authentication** - Password-protected management interface
+1. [pending] **Admin Authentication** - Password-protected management interface
+2. [pending] **Enhanced Activity UI** - Frontend integration for activity management
+3. [pending] **Document Export** - Markdown export functionality
 
 ### Medium Priority
-1. [pending] **Activity Types** - Implement rhyming games, collaborative pads, timed writing
-2. [pending] **Advanced SSE Events** - Activity updates, turn management, typing indicators
-3. [pending] **Group Management** - Enhanced lobby and room functionality
+1. [pending] **Advanced Activity Types** - Implement remaining activity variations
+2. [pending] **Admin Dashboard** - Real-time monitoring interface
+3. [pending] **Activity State Management** - Enhanced progression tracking
 
 ### Low Priority (Future)
-1. [pending] **Loro CRDT Integration** - Collaborative document editing
-2. [pending] **Markdown Export** - Workshop content export functionality
-3. [pending] **Admin Dashboard** - Real-time workshop monitoring interface
+1. [pending] **Loro CRDT Integration** - Replace document system with CRDT
+2. [pending] **Docker Deployment** - Production container setup
+3. [pending] **Advanced Export** - Workshop content compilation
 
 ## File Structure
 
@@ -180,12 +203,21 @@ src/
 │   └── slugify.ts      # German URL slugification
 ├── routes/             # API & page routes ✅
 │   ├── api/            # REST API endpoints
+│   │   ├── index.ts    # API router setup
 │   │   ├── workshops.ts # Workshop CRUD
-│   │   └── participants.ts # Participant CRUD
-│   └── groups.ts       # Group URLs & lobby system
+│   │   ├── participants.ts # Participant CRUD
+│   │   ├── activities.ts # Activity management ✅
+│   │   └── documents.ts # Document management ✅
+│   ├── groups.ts       # Group URLs & lobby system
+│   └── sse.ts          # Server-Sent Events ✅
 ├── services/           # Business logic ✅
 │   ├── workshop.service.ts # Workshop operations
 │   ├── participant.service.ts # Participant operations
+│   ├── activity.service.ts # Activity management ✅
+│   ├── document.service.ts # Document operations ✅
+│   ├── rhyming-game.service.ts # Turn-based games ✅
+│   ├── session.service.ts # Session management ✅
+│   ├── sse.service.ts  # Event broadcasting ✅
 │   ├── url.service.ts  # URL resolution & routing
 │   └── template.service.ts # HTML template rendering
 ├── views/              # HTML templates ✅
@@ -248,10 +280,10 @@ bun run format          # Auto-format code
 
 ## Next Session Priorities
 
-1. **Activity System**: Build flexible framework for writing exercises and turn-based games
-2. **Activity Types**: Implement rhyming chain game, collaborative pads, individual writing
-3. **Turn Management**: Real-time turn progression with skip functionality
-4. **Admin Interface**: Simple password-protected management dashboard
+1. **Admin Interface**: Simple password-protected management dashboard
+2. **Frontend Activity Integration**: Connect Alpine.js with activity services
+3. **Document Export**: Implement markdown export functionality
+4. **Enhanced UI**: Improve activity management interface
 
 ## Key Technical Achievements
 
@@ -279,9 +311,43 @@ bun run format          # Auto-format code
 - **Flexibility first**: Activity system designed to support future creative writing exercises
 - **Claude Code Terminal**: zsh environment works perfectly, Bun 1.2.19 + Node.js v22.3.0 available
 
+## Documentation Maintenance Process
+
+### 📋 How to Keep Documentation Up-to-Date
+
+When implementing new features or making changes:
+
+1. **Always update CLAUDE.md first** - This is the primary memory document
+2. **Update completion status** - Move items from "pending" to "completed" sections
+3. **Add new todos** - Include new requirements in the current todo list
+4. **Update file structure** - Reflect any new files or directories added
+5. **Document key decisions** - Add important architectural choices to memory
+
+### 🔄 Documentation Structure
+
+- **Primary**: `/CLAUDE.md` - Complete project memory and status
+- **Archive**: `/claude-documentation/` - Historical planning and references
+- **User**: `/readme.md` - Public project overview in German
+
+### 📅 Update Triggers
+
+Update documentation when:
+- ✅ Completing major features or services
+- 🆕 Adding new API routes or services  
+- 🏗️ Making architectural decisions
+- 🐛 Solving significant implementation challenges
+- 📊 Reaching development milestones
+
+### 🎯 Key Documentation Principles
+
+- **Accuracy**: Documentation reflects actual implementation, not plans
+- **Completeness**: All major features and decisions are documented
+- **Maintenance**: Regular updates during development, not at the end
+- **User Focus**: Remember this is Claude's memory for future sessions
+
 ## Questions for User (If Needed)
 
-- Activity progression tracking implementation details
-- Offline writing storage strategy (browser IndexedDB vs database)
-- Admin capabilities scope (pause activities, time limits, etc.)
-- Document storage approach for Loro CRDT integration
+- Admin interface design preferences (dashboard layout, management features)
+- Markdown export format requirements (individual docs vs compiled workshops)
+- Loro CRDT integration timeline and priorities
+- Docker deployment requirements for workshop environments

@@ -7,6 +7,8 @@
 import { Elysia } from 'elysia';
 import { workshopRoutes } from './workshops';
 import { participantRoutes } from './participants';
+import { activitiesRoutes } from './activities';
+import { documentsRoutes } from './documents';
 
 export const apiRoutes = new Elysia({ prefix: '/api' })
   // API Health check
@@ -18,9 +20,10 @@ export const apiRoutes = new Elysia({ prefix: '/api' })
     endpoints: {
       workshops: '/api/workshops',
       participants: '/api/participants',
+      activities: '/api/activities',
+      documents: '/api/documents',
       // TODO: Add more endpoints as they're implemented
       groups: '/api/groups (coming soon)',
-      activities: '/api/activities (coming soon)',
       sessions: '/api/sessions (coming soon)'
     }
   }))
@@ -28,11 +31,12 @@ export const apiRoutes = new Elysia({ prefix: '/api' })
   // Mount all API route groups
   .use(workshopRoutes)
   .use(participantRoutes)
+  .use(activitiesRoutes)
+  .use(documentsRoutes)
   
   // TODO: Add more route groups as they're implemented
   // .use(writingGroupRoutes)
   // .use(workshopGroupRoutes)
-  // .use(activityRoutes)
   // .use(sessionRoutes)
   
   // Global API error handling

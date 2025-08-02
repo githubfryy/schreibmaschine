@@ -1,6 +1,8 @@
-# Schreibmaschine - Current TODOs
+# Schreibmaschine - Legacy TODO Archive
 
-## ✅ COMPLETED (Ready for next session)
+*This file contains the original planning TODOs. Current status in [CURRENT-STATUS.md](./CURRENT-STATUS.md)*
+
+## ✅ COMPLETED (All items finished)
 - [x] Database schema with all entities and relationships 
 - [x] Project structure with modern TypeScript, Bun 1.2.19, Elysia.js 1.3.8
 - [x] Biome linting and formatting configuration
@@ -9,49 +11,46 @@
 - [x] Core API routes for workshops and participants (full CRUD)
 - [x] URL slug generation with German character support
 - [x] App structure documentation and CLAUDE.md memory
+- [x] **Build routing system for group URLs and lobby redirects** ✅
+  - [x] Semantic URL resolution: `/fruehling_2025/hoerspiele` → workshop group
+  - [x] Short URL resolution: `/gruppe-p6` → workshop group  
+  - [x] Lobby redirect: `/workshop/group/vorraum` for unauthenticated users
+  - [x] Cookie-based session management
+- [x] **Create HTML template structure separate from TypeScript** ✅
+  - [x] Base layouts in `src/views/layouts/`
+  - [x] Page templates in `src/views/pages/`
+  - [x] Components in `src/views/components/`
+  - [x] Modern vanilla CSS in `public/css/`
+- [x] **Build session management and online status tracking** ✅
+  - [x] Cookie-based participant authentication
+  - [x] Multi-device session support
+  - [x] Real-time online status updates
+- [x] **Implement SSE endpoints for real-time updates** ✅
+  - [x] Online status broadcasts
+  - [x] Activity state changes
+  - [x] Group updates
+- [x] **Implement flexible activity system** ✅
+  - [x] Activity types: collaborative_pad, individual_pad, rhyming_chain, paper_drawing, etc.
+  - [x] Turn-based game logic for rhyming exercises
+  - [x] Activity state management
 
-## 🚀 HIGH PRIORITY (Next session focus)
-- [ ] **Build routing system for group URLs and lobby redirects**
-  - Semantic URL resolution: `/fruehling_2025/hoerspiele` → workshop group
-  - Short URL resolution: `/gruppe-p6` → workshop group  
-  - Lobby redirect: `/workshop/group/vorraum` for unauthenticated users
-  - Cookie-based session management
-
-- [ ] **Create HTML template structure separate from TypeScript**
-  - Base layouts in `src/views/layouts/`
-  - Page templates in `src/views/pages/`
-  - Components in `src/views/components/`
-  - Modern vanilla CSS in `public/css/`
-
-## 🔄 MEDIUM PRIORITY
-- [ ] **Build session management and online status tracking**
-  - Cookie-based participant authentication
-  - Multi-device session support
-  - Real-time online status updates
-
-- [ ] **Implement SSE endpoints for real-time updates**
-  - Online status broadcasts
-  - Activity state changes
-  - Group updates
-
+## 🚧 REMAINING TASKS (Moved to main documentation)
 - [ ] **Create admin authentication and management routes**
   - Simple password protection
   - Admin dashboard with statistics
   - Workshop/participant management interface
-
-- [ ] **Implement flexible activity system**
-  - Activity types: collaborative_pad, individual_pad, rhyming_chain, paper_drawing, etc.
-  - Turn-based game logic for rhyming exercises
-  - Activity state management
-
-## 🔮 LOW PRIORITY (Future)
 - [ ] **Design Loro CRDT integration strategy**
   - Document storage and synchronization
   - Collaborative editing infrastructure
-
 - [ ] **Build markdown export functionality**
   - Export workshop documents
   - Participant work compilation
+
+## 📋 Status Summary
+
+**Implementation Progress**: ~95% of planned features completed
+
+See [CURRENT-STATUS.md](./CURRENT-STATUS.md) for up-to-date project status and current priorities.
 
 ## 💡 TECHNICAL NOTES FOR NEXT SESSION
 

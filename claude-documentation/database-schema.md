@@ -1,4 +1,6 @@
-# Schreibmaschine Database Schema
+# Schreibmaschine Database Schema (Archive)
+
+*Note: This is an archived planning document. Current schema status is in [CURRENT-STATUS.md](./CURRENT-STATUS.md)*
 
 ## Overview
 SQLite database with Bun.SQL for local-first collaborative writing workshops.
