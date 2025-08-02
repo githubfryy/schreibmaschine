@@ -1,11 +1,12 @@
 /**
- * Template Service
+ * VentoJS Template Service
  *
- * Handles HTML template rendering with simple mustache-style templating
- * Provides a lightweight alternative to full template engines
+ * Modern TypeScript-native template engine with async support
+ * Replaces custom mustache-style implementation for better maintainability
  */
 
-import { readFileSync } from 'node:fs';
+import vento from 'ventojs';
+import type { Environment, TemplateResult } from 'ventojs/src/environment.js';
 import { join } from 'node:path';
 
 export interface TemplateData {
@@ -28,181 +29,216 @@ export interface TemplateOptions {
 }
 
 export class TemplateService {
-  private static templateCache = new Map<string, string>();
+  private static vento: Environment;
   private static readonly VIEWS_PATH = join(process.cwd(), 'src', 'views');
+
+  /**
+   * Initialize VentoJS engine with configuration
+   */
+  private static initializeVento() {
+    if (!TemplateService.vento) {
+      TemplateService.vento = vento({
+        includes: TemplateService.VIEWS_PATH,
+        autoescape: true,
+        dataVarname: 'it',
+      });
+
+      // Add custom filters for Schreibmaschine
+      TemplateService.setupCustomFilters();
+    }
+    return TemplateService.vento;
+  }
+
+  /**
+   * Setup custom filters for workshop app
+   */
+  private static setupCustomFilters() {
+    const env = TemplateService.vento;
+
+    // German date formatting
+    env.filters['formatDate'] = (date: Date | string) => {
+      const d = typeof date === 'string' ? new Date(date) : date;
+      return d.toLocaleDateString('de-DE', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+    };
+
+    // German time formatting
+    env.filters['formatTime'] = (date: Date | string) => {
+      const d = typeof date === 'string' ? new Date(date) : date;
+      return d.toLocaleTimeString('de-DE', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    };
+
+    // German datetime formatting
+    env.filters['formatDateTime'] = (date: Date | string) => {
+      const d = typeof date === 'string' ? new Date(date) : date;
+      return d.toLocaleString('de-DE', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    };
+
+    // Text truncation
+    env.filters['truncate'] = (text: string, length: number = 100) => {
+      if (!text || text.length <= length) return text;
+      return text.substring(0, length) + '...';
+    };
+
+    // Capitalize first letter (German-aware)
+    env.filters['capitalize'] = (text: string) => {
+      if (!text) return text;
+      return text.charAt(0).toUpperCase() + text.slice(1);
+    };
+
+    // JSON stringify for debugging
+    env.filters['json'] = (obj: any, indent: number = 2) => {
+      return JSON.stringify(obj, null, indent);
+    };
+
+    // Activity status translation
+    env.filters['activityStatus'] = (status: string) => {
+      const statusMap: Record<string, string> = {
+        setup: 'Vorbereitung',
+        active: 'Aktiv',
+        paused: 'Pausiert',
+        completed: 'Abgeschlossen',
+      };
+      return statusMap[status] || status;
+    };
+
+    // Participant count formatting
+    env.filters['participantCount'] = (count: number) => {
+      if (count === 1) return '1 Teilnehmer';
+      return `${count} Teilnehmer`;
+    };
+  }
 
   /**
    * Render a page with optional layout
    */
-  static render(pageName: string, data: TemplateData = {}, options: TemplateOptions = {}): string {
-    const pageContent = TemplateService.renderTemplate(`pages/${pageName}`, data);
+  static async render(
+    pageName: string,
+    data: TemplateData = {},
+    options: TemplateOptions = {}
+  ): Promise<string> {
+    const env = TemplateService.initializeVento();
 
-    if (options.layout !== false && options.layout !== 'none' && options.layout !== undefined) {
-      const layoutName = options.layout || 'base';
-      const layoutData = {
-        ...data,
-        ...options,
-        content: pageContent,
-      };
-      return TemplateService.renderTemplate(`layouts/${layoutName}`, layoutData);
+    // Prepare template data with global variables
+    const templateData = {
+      ...data,
+      ...options,
+      // Global template variables
+      appVersion: process.env['APP_VERSION'] || '1.0.0',
+      isDevelopment: process.env.NODE_ENV === 'development',
+      currentYear: new Date().getFullYear(),
+    };
+
+    try {
+      // Determine template file
+      const templateFile = `pages/${pageName}.vto`;
+
+      // Render the page
+      const result: TemplateResult = await env.run(templateFile, templateData);
+      return result.content;
+    } catch (error) {
+      console.error('VentoJS Template Error:', error);
+      // Fallback error template
+      return TemplateService.renderErrorFallback(pageName, error as Error);
     }
-
-    return pageContent;
   }
 
   /**
    * Render a component template
    */
-  static renderComponent(componentName: string, data: TemplateData = {}): string {
-    return TemplateService.renderTemplate(`components/${componentName}`, data);
-  }
+  static async renderComponent(componentName: string, data: TemplateData = {}): Promise<string> {
+    const env = TemplateService.initializeVento();
 
-  /**
-   * Load and render a template file
-   */
-  private static renderTemplate(templatePath: string, data: TemplateData): string {
-    const fullPath = join(TemplateService.VIEWS_PATH, `${templatePath}.html`);
-
-    // Load template (with caching in production)
-    let template: string;
-    if (process.env.NODE_ENV === 'production' && TemplateService.templateCache.has(fullPath)) {
-      template = TemplateService.templateCache.get(fullPath)!;
-    } else {
-      try {
-        template = readFileSync(fullPath, 'utf-8');
-        if (process.env.NODE_ENV === 'production') {
-          TemplateService.templateCache.set(fullPath, template);
-        }
-      } catch (_error) {
-        throw new Error(`Template not found: ${templatePath}.html`);
-      }
+    try {
+      const templateFile = `components/${componentName}.vto`;
+      const result: TemplateResult = await env.run(templateFile, data);
+      return result.content;
+    } catch (error) {
+      console.error(`VentoJS Component Error (${componentName}):`, error);
+      return `<!-- Component error: ${componentName} -->`;
     }
-
-    // Simple template rendering
-    return TemplateService.processTemplate(template, data);
   }
 
   /**
-   * Process template with mustache-style syntax
-   * Supports: {{variable}}, {{{raw}}}, {{#if condition}}, {{#each array}}, {{> partial}}
+   * Render from string (useful for dynamic templates)
    */
-  private static processTemplate(template: string, data: TemplateData): string {
-    let result = template;
+  static async renderString(templateString: string, data: TemplateData = {}): Promise<string> {
+    const env = TemplateService.initializeVento();
 
-    // Process partials first: {{> component-name}}
-    result = result.replace(/\{\{\s*>\s*([^}]+)\s*\}\}/g, (_match, componentName) => {
-      try {
-        return TemplateService.renderComponent(componentName.trim(), data);
-      } catch (_error) {
-        console.warn(`Partial not found: ${componentName}`);
-        return `<!-- Partial not found: ${componentName} -->`;
-      }
-    });
-
-    // Process conditionals: {{#if condition}}...{{/if}}
-    result = result.replace(
-      /\{\{\s*#if\s+([^}]+)\s*\}\}([\s\S]*?)\{\{\s*\/if\s*\}\}/g,
-      (_match, condition, content) => {
-        const value = TemplateService.getValue(data, condition.trim());
-        return TemplateService.isTruthy(value)
-          ? TemplateService.processTemplate(content, data)
-          : '';
-      }
-    );
-
-    // Process each loops: {{#each array}}...{{/each}}
-    result = result.replace(
-      /\{\{\s*#each\s+([^}]+)\s*\}\}([\s\S]*?)\{\{\s*\/each\s*\}\}/g,
-      (_match, arrayName, content) => {
-        const array = TemplateService.getValue(data, arrayName.trim());
-        if (!Array.isArray(array)) return '';
-
-        return array
-          .map((item, index) => {
-            const itemData = {
-              ...data,
-              ...item,
-              '@index': index,
-              '@first': index === 0,
-              '@last': index === array.length - 1,
-            };
-            return TemplateService.processTemplate(content, itemData);
-          })
-          .join('');
-      }
-    );
-
-    // Process raw variables: {{{variable}}} (no HTML escaping)
-    result = result.replace(/\{\{\{\s*([^}]+)\s*\}\}\}/g, (_match, varName) => {
-      const value = TemplateService.getValue(data, varName.trim());
-      return String(value || '');
-    });
-
-    // Process escaped variables: {{variable}} (HTML escaped)
-    result = result.replace(/\{\{\s*([^}]+)\s*\}\}/g, (_match, varName) => {
-      const value = TemplateService.getValue(data, varName.trim());
-      return TemplateService.escapeHtml(String(value || ''));
-    });
-
-    return result;
-  }
-
-  /**
-   * Get nested property value from data object
-   */
-  private static getValue(data: TemplateData, path: string): any {
-    // Handle helper functions
-    if (path.startsWith('eq ')) {
-      const [, left, right] = path.split(' ');
-      return (
-        TemplateService.getValue(data, left || '') === TemplateService.getValue(data, right || '')
-      );
+    try {
+      const result: TemplateResult = await env.runString(templateString, data);
+      return result.content;
+    } catch (error) {
+      console.error('VentoJS String Template Error:', error);
+      return `<!-- Template error: ${(error as Error).message} -->`;
     }
-
-    // Handle direct property access
-    const keys = path.split('.');
-    let value = data;
-
-    for (const key of keys) {
-      if (value == null) return undefined;
-      value = value[key];
-    }
-
-    return value;
   }
 
   /**
-   * Check if value is truthy for template conditions
+   * Error fallback when template fails
    */
-  private static isTruthy(value: any): boolean {
-    if (value == null) return false;
-    if (typeof value === 'boolean') return value;
-    if (typeof value === 'number') return value !== 0;
-    if (typeof value === 'string') return value.length > 0;
-    if (Array.isArray(value)) return value.length > 0;
-    if (typeof value === 'object') return Object.keys(value).length > 0;
-    return Boolean(value);
-  }
-
-  /**
-   * Escape HTML characters
-   */
-  private static escapeHtml(text: string): string {
-    const htmlEscapes: Record<string, string> = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#39;',
-    };
-
-    return text.replace(/[&<>"']/g, (char) => htmlEscapes[char] || char);
+  private static renderErrorFallback(templateName: string, error: Error): string {
+    const isDev = process.env.NODE_ENV === 'development';
+    
+    return `
+      <!DOCTYPE html>
+      <html lang="de">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Template Error - Schreibmaschine</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 2rem; }
+          .error { background: #fee; border: 1px solid #fcc; padding: 1rem; border-radius: 4px; }
+          .error h1 { color: #c00; margin-top: 0; }
+          pre { background: #f5f5f5; padding: 1rem; overflow: auto; }
+        </style>
+      </head>
+      <body>
+        <div class="error">
+          <h1>🛠️ Template-Fehler</h1>
+          <p>Die Vorlage <strong>${templateName}</strong> konnte nicht geladen werden.</p>
+          ${isDev ? `<pre>${error.stack}</pre>` : ''}
+          <p><a href="/">← Zurück zur Startseite</a></p>
+        </div>
+      </body>
+      </html>
+    `;
   }
 
   /**
    * Clear template cache (useful for development)
    */
   static clearCache(): void {
-    TemplateService.templateCache.clear();
+    if (TemplateService.vento) {
+      TemplateService.vento.cache.clear();
+    }
+  }
+
+  /**
+   * Get cache statistics (for debugging)
+   */
+  static getCacheStats(): { size: number; keys: string[] } {
+    if (!TemplateService.vento) {
+      return { size: 0, keys: [] };
+    }
+
+    const cache = TemplateService.vento.cache;
+    return {
+      size: cache.size,
+      keys: Array.from(cache.keys()),
+    };
   }
 }

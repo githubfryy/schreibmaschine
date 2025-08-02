@@ -105,7 +105,7 @@ export const groupRoutes = new Elysia()
 
         if (!resolved) {
           set.status = 404;
-          const html = TemplateService.render(
+          const html = await TemplateService.render(
             'error',
             {
               error_icon: '🔍',
@@ -145,7 +145,7 @@ export const groupRoutes = new Elysia()
         }
       } catch (_error) {
         set.status = 500;
-        const html = TemplateService.render(
+        const html = await TemplateService.render(
           'error',
           {
             error_icon: '⚠️',
@@ -180,7 +180,7 @@ export const groupRoutes = new Elysia()
 
         if (!lobbyInfo) {
           set.status = 404;
-          const html = TemplateService.render(
+          const html = await TemplateService.render(
             'error',
             {
               error_icon: '🔍',
@@ -199,7 +199,7 @@ export const groupRoutes = new Elysia()
           });
         }
 
-        const html = TemplateService.render('lobby', lobbyInfo, {
+        const html = await TemplateService.render('lobby', lobbyInfo, {
           title: `${lobbyInfo.writing_group.name} - ${lobbyInfo.workshop.name}`,
           additionalCSS: 'lobby',
           showHeader: false,
@@ -211,7 +211,7 @@ export const groupRoutes = new Elysia()
         });
       } catch (_error) {
         set.status = 500;
-        const html = TemplateService.render(
+        const html = await TemplateService.render(
           'error',
           {
             error_icon: '⚠️',
@@ -250,7 +250,7 @@ export const groupRoutes = new Elysia()
 
         if (!resolved) {
           set.status = 404;
-          const html = TemplateService.render(
+          const html = await TemplateService.render(
             'error',
             {
               error_icon: '🔍',
@@ -298,7 +298,7 @@ export const groupRoutes = new Elysia()
           online_count: 1, // TODO: Get real online count
         };
 
-        const html = TemplateService.render('group-room', groupRoomData, {
+        const html = await TemplateService.render('group-room', groupRoomData, {
           title: `${resolved.writing_group.name} - ${resolved.workshop.name}`,
           additionalCSS: 'group-room',
           showHeader: false,
@@ -310,7 +310,7 @@ export const groupRoutes = new Elysia()
         });
       } catch (_error) {
         set.status = 500;
-        const html = TemplateService.render(
+        const html = await TemplateService.render(
           'error',
           {
             error_icon: '⚠️',

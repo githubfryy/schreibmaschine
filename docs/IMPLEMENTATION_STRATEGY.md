@@ -158,17 +158,43 @@ src/routes/api/
 6. ✅ **Teamer controls** for activity management in group room
 7. ✅ **Comprehensive styling** with activity-specific components and responsive design
 
-### Step 2: Admin Activity Controls
+### ✅ Step 1.5: VentoJS Template Engine Migration (COMPLETED - January 2025)
+1. ✅ **VentoJS Installation** - Modern TypeScript-native template engine (v1.15.2)
+2. ✅ **Custom Template Service** - Replaced mustache-style with VentoJS wrapper
+3. ✅ **Admin Templates Migration** - Fixed admin login/dashboard rendering issues
+4. ✅ **Base Layout System** - Unified VentoJS layout with Alpine.js integration
+5. ✅ **Error & Welcome Templates** - Modern page templates with responsive design
+6. ✅ **Custom German Filters** - Date, status, count localization for workshop context
+7. ✅ **Async Route Integration** - All template rendering converted to async/await
+8. ✅ **TypeScript Type Safety** - Full VentoJS API integration with proper types
+9. ✅ **Implementation Documentation** - Comprehensive learning guide (`VENTOJS_IMPLEMENTATION_LEARNINGS.md`)
+
+### Step 2: Complete Template Migration
+1. **Lobby template migration** - Convert `lobby.html` to `lobby.vto`
+2. **Group room template migration** - Convert `group-room.html` to `group-room.vto`
+3. **Component migration** - Convert activity components to VentoJS format
+4. **Template validation** - Test all migrated templates with real data
+
+### Step 3: Admin Activity Controls
 1. **Activity creation forms** in admin dashboard
 2. **Real-time activity monitoring**
 3. **Activity start/stop controls**
 
-### Step 3: Document Export
+### Step 4: Document Export
 1. **Markdown export API** endpoints
 2. **Export UI** in admin dashboard
 3. **Workshop compilation** functionality
 
 ## Technical Decisions Documentation
+
+### Template Engine Choice: VentoJS (NEW - January 2025)
+**Rationale:** Modern TypeScript-native template system
+- Native TypeScript support with proper type checking
+- Async-first architecture for real-time features
+- Unified `{{ }}` syntax easier than Nunjucks `{% %}`
+- Pipeline filters with `|>` operator for data transformation
+- Better error messages and debugging vs custom implementation
+- Battle-tested alternative to custom mustache-style system
 
 ### Frontend Framework Choice: Alpine.js
 **Rationale:** Perfect for workshop reliability

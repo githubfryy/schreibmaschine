@@ -15,7 +15,7 @@ export const adminRoutes = new Elysia({ name: 'adminRoutes' })
   .use(adminMiddleware)
 
   // Admin login page
-  .get('/admin', (context: any) => {
+  .get('/admin', async (context: any) => {
     const { isAdminAuthenticated } = context;
 
     if (isAdminAuthenticated) {
@@ -27,17 +27,16 @@ export const adminRoutes = new Elysia({ name: 'adminRoutes' })
     }
 
     // Show login page
-    const html = TemplateService.render(
+    const html = await TemplateService.render(
       'admin-login',
       {
         isDevelopment,
       },
       {
-        title: 'Admin-Anmeldung - Schreibmaschine',
+        title: 'Admin-Anmeldung',
         showHeader: false,
         showFooter: false,
-        additionalCSS: '/css/admin.css',
-        additionalJS: '/js/alpinejs/alpine.min.js',
+        additionalCSS: 'admin',
       }
     );
 
@@ -76,12 +75,11 @@ export const adminRoutes = new Elysia({ name: 'adminRoutes' })
       onlineStats,
     };
 
-    const html = TemplateService.render('admin-dashboard', dashboardData, {
-      title: 'Admin Dashboard - Schreibmaschine',
+    const html = await TemplateService.render('admin-dashboard', dashboardData, {
+      title: 'Admin Dashboard',
       showHeader: false,
       showFooter: false,
-      additionalCSS: '/css/admin.css',
-      additionalJS: '/js/alpinejs/alpine.min.js',
+      additionalCSS: 'admin',
     });
 
     return new Response(html, {

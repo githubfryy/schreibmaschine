@@ -68,8 +68,8 @@ const app = new Elysia()
   }))
 
   // Welcome page
-  .get('/', () => {
-    const html = TemplateService.render(
+  .get('/', async () => {
+    const html = await TemplateService.render(
       'welcome',
       {
         bun_version: process.versions.bun || 'unknown',
