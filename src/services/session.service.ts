@@ -156,9 +156,9 @@ export class SessionService {
       JOIN participants p ON os.participant_id = p.id
       JOIN workshop_groups wg ON os.workshop_group_id = wg.id
       WHERE os.session_token = ?
-        AND os.last_seen > ?
+        AND os.last_seen > datetime('now', '-' || ? || ' seconds')
     `)
-      .get(sessionToken, new Date(Date.now() - env.ONLINE_STATUS_TIMEOUT).toISOString()) as any;
+      .get(sessionToken, Math.floor(env.ONLINE_STATUS_TIMEOUT / 1000)) as any;
 
     if (!result) return null;
 

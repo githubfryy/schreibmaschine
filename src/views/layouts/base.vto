@@ -3,64 +3,39 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ title || "Schreibmaschine" }}</title>
+  <title>{{ pageTitle || title || "Schreibmaschine" }}</title>
   <link rel="icon" type="image/x-icon" href="/assets/images/favicon.ico">
+  <link rel="stylesheet" href="/assets/css/cosmo.css">
   <link rel="stylesheet" href="/assets/css/main.css">
   {{ if additionalCSS }}
   <link rel="stylesheet" href="/assets/css/{{ additionalCSS }}.css">
   {{ /if }}
 </head>
 <body>
-  {{ if showHeader }}
-  <header class="app-header">
-    <div class="header-content">
-      <div class="logo">
-        <h1>🖋️ Schreibmaschine</h1>
-        {{ if subtitle }}
-        <span class="subtitle">{{ subtitle }}</span>
-        {{ /if }}
-      </div>
-      {{ if navigation }}
-      <nav class="main-nav">
-        {{ for navItem of navigation }}
-        <a href="{{ navItem.url }}" class="nav-link {{ if navItem.active }}active{{ /if }}">{{ navItem.label }}</a>
-        {{ /for }}
-      </nav>
-      {{ /if }}
-    </div>
-  </header>
-  {{ /if }}
 
-  {{ if showMainWrapper }}
-  <main class="main-content">
-    {{ content }}
-  </main>
-  {{ else }}
+        <h1>Schreibmaschine</h1>
+
   {{ content }}
+ 
+
+  <script src="/assets/js/main.js" defer></script>
+
+
+  {{ if additionalJS }}
+  <script src="/assets/js/{{ additionalJS }}.js"></script>
   {{ /if }}
 
-  {{ if showFooter }}
-  <footer class="app-footer">
-    <div class="footer-content">
-      <p>&copy; {{ currentYear }} Schreibmaschine - Kollaborative Schreibwerkstätten</p>
-    </div>
-  </footer>
-  {{ /if }}
 
-  <!-- Alpine.js Plugins (must load before Alpine.js core) -->
+  {{# Alpine.js Plugins (must load before Alpine.js core) #}}
   <script src="/assets/js/alpinejs/alpinejs_persist.js" defer></script>
   <script src="/assets/js/alpinejs/alpine_ajax.js" defer></script>
   <script src="/assets/js/alpinejs/alpinejs_focus.js" defer></script>
   <script src="/assets/js/alpinejs/alpinejs_intersect.js" defer></script>
   
-  <!-- Alpine.js Core (must load last) -->
+  {{# Alpine.js Core (must load last) #}}
   <script src="/assets/js/alpinejs/alpinejs.js" defer></script>
   
-  <!-- Common JavaScript utilities -->
-  <script src="/assets/js/common.js"></script>
-  
-  {{ if additionalJS }}
-  <script src="/assets/js/{{ additionalJS }}.js"></script>
-  {{ /if }}
+
+
 </body>
 </html>

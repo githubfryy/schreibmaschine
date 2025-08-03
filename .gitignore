@@ -1,3 +1,12 @@
 .env
+.archived
+.claude
+claude-documentation
+docs
 node_modules
 
+perplexity-input.md
+CLAUDE.md
+bun.lock
+ideas
+data

@@ -1,219 +1,291 @@
-import { Elysia } from 'elysia';
-import { z } from 'zod';
-import { sessionMiddleware } from '../../middleware/session';
-import { ActivityService } from '../../services/activity.service';
+/**
+ * Activity API Routes
+ *
+ * REST API endpoints for activity management
+ * Following Elysia 1.3.8 method chaining best practices
+ */
 
-// Input validation schemas
-const ActivityCreateSchema = z.object({
-  name: z.string().min(1),
-  type: z
-    .string()
-    .refine(
-      (val) =>
-        [
-          'individual_pad',
-          'collaborative_pad',
-          'rhyming_chain',
-          'paper_drawing',
-          'timed_writing',
-          'mashup_writing',
-        ].includes(val),
-      { message: 'Invalid activity type' }
-    ),
-  description: z.string().optional(),
-  settings: z.record(z.string(), z.any()).optional(),
-  max_participants: z.number().optional(),
-});
+import { Elysia, t } from 'elysia';
+import { ActivityService } from '@/services/activity.service';
+import { sessionMiddleware, requireAuth, requireTeamer } from '@/middleware/session';
+import type { ApiError } from '@/types/api';
 
-const ActivityUpdateSchema = z.object({
-  name: z.string().optional(),
-  description: z.string().optional(),
-  status: z
-    .string()
-    .refine((val) => ['setup', 'active', 'paused', 'completed'].includes(val), {
-      message: 'Invalid status',
-    })
-    .optional(),
-  settings: z.record(z.string(), z.any()).optional(),
-});
-
-const ActivitySubmissionSchema = z.object({
-  content: z.string().min(1),
-});
+// Activity validation models
+const ActivityModel = {
+  query: t.Object({
+    page: t.Optional(t.Numeric({ minimum: 1 })),
+    limit: t.Optional(t.Numeric({ minimum: 1, maximum: 100 })),
+    group_id: t.Optional(t.String()),
+    status: t.Optional(t.Union([
+      t.Literal('setup'),
+      t.Literal('active'), 
+      t.Literal('paused'),
+      t.Literal('completed')
+    ])),
+  }),
+  
+  params: {
+    id: t.Object({ id: t.String() }),
+    groupId: t.Object({ groupId: t.String() }),
+  },
+  
+  body: {
+    create: t.Object({
+      name: t.String({ minLength: 1, maxLength: 200 }),
+      type: t.Union([
+        t.Literal('individual_pad'),
+        t.Literal('collaborative_pad'),
+        t.Literal('rhyming_chain'),
+        t.Literal('paper_drawing'),
+        t.Literal('timed_writing'),
+        t.Literal('mashup_writing'),
+      ]),
+      description: t.Optional(t.String({ maxLength: 1000 })),
+      settings: t.Optional(t.Record(t.String(), t.Any())),
+      max_participants: t.Optional(t.Numeric({ minimum: 1 })),
+    }),
+    
+    update: t.Object({
+      name: t.Optional(t.String({ minLength: 1, maxLength: 200 })),
+      description: t.Optional(t.String({ maxLength: 1000 })),
+      status: t.Optional(t.Union([
+        t.Literal('setup'),
+        t.Literal('active'),
+        t.Literal('paused'),
+        t.Literal('completed')
+      ])),
+      settings: t.Optional(t.Record(t.String(), t.Any())),
+    }),
+    
+    submit: t.Object({
+      content: t.String({ minLength: 1 }),
+    }),
+  },
+};
 
 export const activitiesRoutes = new Elysia({ prefix: '/activities' })
   .use(sessionMiddleware)
-  .decorate('activityService', new ActivityService())
-
-  // Get activities for a group
-  .get('/groups/:groupId', async ({ params, activityService }) => {
-    const activities = await activityService.getActivitiesForGroup(params.groupId);
-    return { activities };
+  // Register models for better type inference
+  .model({
+    'activity.query': ActivityModel.query,
+    'activity.create': ActivityModel.body.create,
+    'activity.update': ActivityModel.body.update,
+    'activity.submit': ActivityModel.body.submit,
   })
+  
+  // Get all activities with pagination and filtering
+  .get('/', async ({ query }) => {
+    const {
+      page = 1,
+      limit = 20,
+      group_id,
+      status,
+    } = query;
 
-  // Get specific activity details
-  .get('/:activityId', async ({ params, activityService }) => {
-    const activity = await activityService.getActivityById(params.activityId);
+    const result = await ActivityService.findAll({
+      page: Number(page),
+      limit: Number(limit),
+      ...(group_id && { group_id }),
+      ...(status && { status }),
+    });
+
+    return {
+      success: true,
+      data: result,
+      timestamp: new Date().toISOString(),
+    };
+  }, {
+    query: 'activity.query',
+  })
+  
+  // Get activity by ID
+  .get('/:id', async ({ params, set }) => {
+    const activity = await ActivityService.findById(params.id);
+
     if (!activity) {
-      throw new Error('Activity not found');
-    }
-    return { activity };
-  })
-
-  // Get activity state (for current participant)
-  .get('/:activityId/state', async (context: any) => {
-    const { params, activityService, participant } = context;
-    if (!participant?.id) {
-      throw new Error('Authentication required');
+      set.status = 404;
+      const apiError: ApiError = {
+        success: false,
+        error: 'Activity not found',
+        timestamp: new Date().toISOString(),
+      };
+      return apiError;
     }
 
-    const state = await activityService.getActivityState(params.activityId, participant.id);
-    return state;
+    return {
+      success: true,
+      data: activity,
+      timestamp: new Date().toISOString(),
+    };
+  }, {
+    params: ActivityModel.params.id,
   })
 
-  // Create new activity (teamer only)
+  // Get activities for a specific group
+  .get('/groups/:groupId', async ({ params }) => {
+    const activities = await ActivityService.getActivitiesForGroup(params.groupId);
+    
+    return {
+      success: true,
+      data: activities,
+      timestamp: new Date().toISOString(),
+    };
+  }, {
+    params: ActivityModel.params.groupId,
+  })
+
+  // Get activity state for current participant (requires auth)
+  .use(requireAuth)
+  .get('/:id/state', async (context: any) => {
+    const { params, participant } = context;
+    const state = await ActivityService.getActivityState(params.id, participant.id);
+    
+    return {
+      success: true,
+      data: state,
+      timestamp: new Date().toISOString(),
+    };
+  }, {
+    params: ActivityModel.params.id,
+  })
+
+  // Create new activity for a group (requires teamer role)
+  .use(requireTeamer)
   .post('/groups/:groupId', async (context: any) => {
-    const { params, body, activityService, participant } = context;
-    if (!participant?.id) {
-      throw new Error('Authentication required');
-    }
-
-    // Check if user is teamer for this group
-    const isTeamer = await activityService.isTeamerForGroup(participant.id, params.groupId);
-    if (!isTeamer) {
-      throw new Error('Only teamers can create activities');
-    }
-
-    const validated = ActivityCreateSchema.parse(body);
-    const activityData = {
-      name: validated.name,
-      type: validated.type,
-      description: validated.description || '',
-      settings: validated.settings || {},
-      max_participants: validated.max_participants,
+    const { params, body, set, participant } = context;
+    const activity = await ActivityService.createActivity(params.groupId, {
+      ...body,
       created_by: participant.id,
+    });
+
+    set.status = 201;
+    return {
+      success: true,
+      data: activity,
+      message: 'Activity created successfully',
+      timestamp: new Date().toISOString(),
     };
-    const activity = await activityService.createActivity(params.groupId, activityData);
-
-    return { activity };
+  }, {
+    params: ActivityModel.params.groupId,
+    body: 'activity.create',
   })
 
-  // Update activity (teamer only)
-  .put('/:activityId', async (context: any) => {
-    const { params, body, activityService, participant } = context;
-    if (!participant?.id) {
-      throw new Error('Authentication required');
-    }
+  // Update activity (requires teamer role)
+  .use(requireTeamer)
+  .put('/:id', async (context: any) => {
+    const { params, body, set } = context;
+    const activity = await ActivityService.updateActivity(params.id, body);
 
-    const activity = await activityService.getActivityById(params.activityId);
     if (!activity) {
-      throw new Error('Activity not found');
+      set.status = 404;
+      const apiError: ApiError = {
+        success: false,
+        error: 'Activity not found',
+        timestamp: new Date().toISOString(),
+      };
+      return apiError;
     }
 
-    // Check if user is teamer for this group
-    const isTeamer = await activityService.isTeamerForGroup(
-      participant.id,
-      activity.workshop_group_id
-    );
-    if (!isTeamer) {
-      throw new Error('Only teamers can update activities');
-    }
-
-    const validated = ActivityUpdateSchema.parse(body);
-    const updateData = {
-      ...(validated.name !== undefined && { name: validated.name }),
-      ...(validated.description !== undefined && { description: validated.description }),
-      ...(validated.status !== undefined && { status: validated.status }),
-      ...(validated.settings !== undefined && { settings: validated.settings }),
+    return {
+      success: true,
+      data: activity,
+      message: 'Activity updated successfully',
+      timestamp: new Date().toISOString(),
     };
-    const updatedActivity = await activityService.updateActivity(params.activityId, updateData);
-
-    return { activity: updatedActivity };
+  }, {
+    params: ActivityModel.params.id,
+    body: 'activity.update',
   })
 
-  // Submit content to activity (participant)
-  .post('/:activityId/submit', async (context: any) => {
-    const { params, body, activityService, participant } = context;
-    if (!participant?.id) {
-      throw new Error('Authentication required');
-    }
-
-    const validated = ActivitySubmissionSchema.parse(body);
-    const result = await activityService.submitToActivity(
-      params.activityId,
+  // Submit content to activity (requires participant auth)
+  .use(requireAuth)
+  .post('/:id/submit', async (context: any) => {
+    const { params, body, participant } = context;
+    const result = await ActivityService.submitToActivity(
+      params.id,
       participant.id,
-      validated.content
+      body.content
     );
 
-    return result;
+    return {
+      success: true,
+      data: result,
+      message: 'Content submitted successfully',
+      timestamp: new Date().toISOString(),
+    };
+  }, {
+    params: ActivityModel.params.id,
+    body: 'activity.submit',
   })
 
-  // Skip turn in activity (for turn-based activities)
-  .post('/:activityId/skip', async (context: any) => {
-    const { params, activityService, participant } = context;
-    if (!participant?.id) {
-      throw new Error('Authentication required');
-    }
-
-    const result = await activityService.skipTurn(params.activityId, participant.id);
-    return result;
+  // Skip turn in activity (for turn-based activities, requires participant auth)
+  .use(requireAuth)
+  .post('/:id/skip', async (context: any) => {
+    const { params, participant } = context;
+    const result = await ActivityService.skipTurn(params.id, participant.id);
+    
+    return {
+      success: true,
+      data: result,
+      message: 'Turn skipped successfully',
+      timestamp: new Date().toISOString(),
+    };
+  }, {
+    params: ActivityModel.params.id,
   })
 
-  // Delete activity (teamer only)
-  .delete('/:activityId', async (context: any) => {
-    const { params, activityService, participant } = context;
-    if (!participant?.id) {
-      throw new Error('Authentication required');
+  // Delete activity (requires teamer role)
+  .use(requireTeamer)
+  .delete('/:id', async (context: any) => {
+    const { params, set } = context;
+    const deleted = await ActivityService.deleteActivity(params.id);
+
+    if (!deleted) {
+      set.status = 404;
+      const apiError: ApiError = {
+        success: false,
+        error: 'Activity not found',
+        timestamp: new Date().toISOString(),
+      };
+      return apiError;
     }
 
-    const activity = await activityService.getActivityById(params.activityId);
-    if (!activity) {
-      throw new Error('Activity not found');
-    }
-
-    // Check if user is teamer for this group
-    const isTeamer = await activityService.isTeamerForGroup(
-      participant.id,
-      activity.workshop_group_id
-    );
-    if (!isTeamer) {
-      throw new Error('Only teamers can delete activities');
-    }
-
-    await activityService.deleteActivity(params.activityId);
-    return { success: true };
+    return {
+      success: true,
+      message: 'Activity deleted successfully',
+      timestamp: new Date().toISOString(),
+    };
+  }, {
+    params: ActivityModel.params.id,
   })
 
-  // Error handling
-  .onError((context: any) => {
-    const { error, set } = context;
-    console.error('Activity API error:', error);
+  // Add global error handling for activity routes
+  .onError(({ code, error, set }) => {
+    console.error(`[Activity API Error ${code}]`, error);
 
-    // Handle Error objects
-    if (error instanceof Error) {
-      if (error.message === 'Authentication required') {
-        set.status = 401;
-        return { error: 'Authentication required' };
-      }
-
-      if (error.message === 'Activity not found') {
+    switch (code) {
+      case 'VALIDATION':
+        set.status = 400;
+        return {
+          success: false,
+          error: 'Validation failed',
+          details: error.message,
+          timestamp: new Date().toISOString(),
+        };
+      case 'NOT_FOUND':
         set.status = 404;
-        return { error: 'Activity not found' };
-      }
-
-      if (error.message.includes('Only teamers')) {
-        set.status = 403;
-        return { error: error.message };
-      }
+        return {
+          success: false,
+          error: 'Resource not found',
+          timestamp: new Date().toISOString(),
+        };
+      default:
+        set.status = 500;
+        return {
+          success: false,
+          error: 'Internal server error',
+          details: error instanceof Error ? error.message : String(error),
+          timestamp: new Date().toISOString(),
+        };
     }
-
-    // Validation errors (ZodError)
-    if (error && typeof error === 'object' && 'name' in error && error.name === 'ZodError') {
-      set.status = 400;
-      return { error: 'Invalid input', details: (error as any).errors };
-    }
-
-    // Internal server error
-    set.status = 500;
-    return { error: 'Internal server error' };
   });

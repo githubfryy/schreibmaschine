@@ -1,7 +1,7 @@
 import type { Database } from 'bun:sqlite';
-import db from '../config/database';
-import type { Document } from '../types/database';
-import { generateShortId } from '../utils/crypto';
+import { db } from '@/config/database';
+import type { Document } from '@/types/database';
+import { generateShortId } from '@/utils/crypto';
 
 export class DocumentService {
   private db: Database;

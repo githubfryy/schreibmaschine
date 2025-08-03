@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schreibmaschine API Tester</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            border: 1px solid #ddd;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .test-section h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        button {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #005999;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .response {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 14px;
+        }
+        .success {
+            border-color: #4caf50;
+            background: #f1f8e9;
+        }
+        .error {
+            border-color: #f44336;
+            background: #ffebee;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Schreibmaschine API Tester</h1>
+    <p>Testing the refactored Elysia.js backend API endpoints</p>
+
+    <!-- Health Check -->
+    <div class="test-section">
+        <h2>🏥 Health Check</h2>
+        <button onclick="testHealthCheck()">Test /health</button>
+        <button onclick="testApiHealth()">Test /api/health</button>
+        <div id="health-response" class="response" style="display: none;"></div>
+    </div>
+
+    <!-- Workshop API Tests -->
+    <div class="test-section">
+        <h2>🎪 Workshop API</h2>
+        <button onclick="testGetWorkshops()">GET /api/workshops</button>
+        <button onclick="testGetWorkshopById()">GET /api/workshops/:id</button>
+        <button onclick="testGetWorkshopBySlug()">GET /api/workshops/slug/:slug</button>
+        <div id="workshop-response" class="response" style="display: none;"></div>
+    </div>
+
+    <!-- Participant API Tests -->
+    <div class="test-section">
+        <h2>👥 Participant API</h2>
+        <button onclick="testGetParticipants()">GET /api/participants</button>
+        <div id="participant-response" class="response" style="display: none;"></div>
+    </div>
+
+    <!-- Activity API Tests -->
+    <div class="test-section">
+        <h2>📝 Activity API</h2>
+        <button onclick="testGetActivities()">GET /api/activities</button>
+        <div id="activity-response" class="response" style="display: none;"></div>
+    </div>
+
+    <!-- Document API Tests -->
+    <div class="test-section">
+        <h2>📄 Document API</h2>
+        <button onclick="testGetDocuments()">GET /api/documents</button>
+        <div id="document-response" class="response" style="display: none;"></div>
+    </div>
+
+    <!-- SSE Test -->
+    <div class="test-section">
+        <h2>📡 Server-Sent Events (SSE)</h2>
+        <button onclick="testSSE()">Connect to /api/test-sse</button>
+        <button onclick="stopSSE()">Disconnect</button>
+        <div id="sse-response" class="response" style="display: none;"></div>
+    </div>
+
+    <!-- Create Workshop Test -->
+    <div class="test-section">
+        <h2>➕ Create Workshop</h2>
+        <div>
+            <label>Workshop Name:</label>
+            <input type="text" id="workshop-name" value="Test Workshop" />
+        </div>
+        <div>
+            <label>Description:</label>
+            <textarea id="workshop-description" rows="3">A test workshop created via API</textarea>
+        </div>
+        <div>
+            <label>Slug (optional):</label>
+            <input type="text" id="workshop-slug" value="test-workshop" />
+        </div>
+        <button onclick="testCreateWorkshop()">Create Workshop</button>
+        <div id="create-response" class="response" style="display: none;"></div>
+    </div>
+
+    <script>
+        // Utility function to make API requests
+        async function makeRequest(url, options = {}) {
+            const responseDiv = options.responseElementId ? 
+                document.getElementById(options.responseElementId) : null;
+            
+            if (responseDiv) {
+                responseDiv.style.display = 'block';
+                responseDiv.textContent = '🔄 Loading...';
+                responseDiv.className = 'response loading';
+            }
+
+            try {
+                const response = await fetch(url, {
+                    method: options.method || 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    body: options.body ? JSON.stringify(options.body) : undefined
+                });
+
+                const data = await response.json();
+                const result = {
+                    status: response.status,
+                    statusText: response.statusText,
+                    data: data
+                };
+
+                if (responseDiv) {
+                    responseDiv.textContent = JSON.stringify(result, null, 2);
+                    responseDiv.className = response.ok ? 'response success' : 'response error';
+                }
+
+                return result;
+            } catch (error) {
+                const errorResult = {
+                    error: error.message,
+                    type: 'Network Error'
+                };
+
+                if (responseDiv) {
+                    responseDiv.textContent = JSON.stringify(errorResult, null, 2);
+                    responseDiv.className = 'response error';
+                }
+
+                return errorResult;
+            }
+        }
+
+        // Health Check Tests
+        async function testHealthCheck() {
+            await makeRequest('/health', { responseElementId: 'health-response' });
+        }
+
+        async function testApiHealth() {
+            await makeRequest('/api/health', { responseElementId: 'health-response' });
+        }
+
+        // Workshop API Tests
+        async function testGetWorkshops() {
+            await makeRequest('/api/workshops', { responseElementId: 'workshop-response' });
+        }
+
+        async function testGetWorkshopById() {
+            await makeRequest('/api/workshops/1', { responseElementId: 'workshop-response' });
+        }
+
+        async function testGetWorkshopBySlug() {
+            await makeRequest('/api/workshops/slug/fruehling_2025', { 
+                responseElementId: 'workshop-response' 
+            });
+        }
+
+        async function testCreateWorkshop() {
+            const name = document.getElementById('workshop-name').value;
+            const description = document.getElementById('workshop-description').value;
+            const slug = document.getElementById('workshop-slug').value;
+
+            const body = {
+                name: name,
+                description: description || undefined,
+                slug: slug || undefined
+            };
+
+            await makeRequest('/api/workshops', {
+                method: 'POST',
+                body: body,
+                responseElementId: 'create-response'
+            });
+        }
+
+        // Participant API Tests
+        async function testGetParticipants() {
+            await makeRequest('/api/participants', { responseElementId: 'participant-response' });
+        }
+
+        // Activity API Tests
+        async function testGetActivities() {
+            await makeRequest('/api/activities', { responseElementId: 'activity-response' });
+        }
+
+        // Document API Tests
+        async function testGetDocuments() {
+            await makeRequest('/api/documents', { responseElementId: 'document-response' });
+        }
+
+        // SSE Testing
+        let sseConnection = null;
+        let sseMessageCount = 0;
+
+        function testSSE() {
+            const responseDiv = document.getElementById('sse-response');
+            responseDiv.style.display = 'block';
+            responseDiv.className = 'response';
+            responseDiv.textContent = '🔄 Connecting to SSE...\n';
+            sseMessageCount = 0;
+
+            try {
+                sseConnection = new EventSource('/api/test-sse');
+                
+                sseConnection.onopen = function(event) {
+                    responseDiv.textContent += '✅ SSE Connection opened\n';
+                    responseDiv.className = 'response success';
+                };
+
+                sseConnection.onmessage = function(event) {
+                    sseMessageCount++;
+                    const data = JSON.parse(event.data);
+                    responseDiv.textContent += `📩 Message ${sseMessageCount}: ${data.type} - ${data.data.message || JSON.stringify(data.data)}\n`;
+                    
+                    // Auto-scroll to bottom
+                    responseDiv.scrollTop = responseDiv.scrollHeight;
+                };
+
+                sseConnection.onerror = function(event) {
+                    responseDiv.textContent += '❌ SSE Connection error\n';
+                    responseDiv.className = 'response error';
+                    console.error('SSE error:', event);
+                };
+
+                sseConnection.onclose = function(event) {
+                    responseDiv.textContent += '🔌 SSE Connection closed\n';
+                };
+
+            } catch (error) {
+                responseDiv.textContent = `❌ Error creating SSE connection: ${error.message}`;
+                responseDiv.className = 'response error';
+            }
+        }
+
+        function stopSSE() {
+            if (sseConnection) {
+                sseConnection.close();
+                sseConnection = null;
+                const responseDiv = document.getElementById('sse-response');
+                responseDiv.textContent += '🛑 SSE Connection stopped by user\n';
+            }
+        }
+
+        // Auto-test on page load
+        window.addEventListener('load', () => {
+            console.log('🚀 API Tester loaded');
+            console.log('Server should be running at: http://localhost:3000');
+        });
+    </script>
+</body>
+</html>

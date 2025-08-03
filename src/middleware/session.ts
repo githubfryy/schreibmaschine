@@ -19,7 +19,7 @@ export interface SessionContext {
  * Session middleware plugin
  */
 export const sessionMiddleware = new Elysia({ name: 'session' }).derive(async ({ cookie }) => {
-  const sessionToken = cookie['session_token']?.value;
+  const sessionToken = cookie.session_token?.value;
 
   if (!sessionToken) {
     return {
@@ -30,18 +30,7 @@ export const sessionMiddleware = new Elysia({ name: 'session' }).derive(async ({
     };
   }
 
-  // Update session activity (heartbeat)
-  const isActive = await SessionService.updateSessionActivity(sessionToken);
-  if (!isActive) {
-    return {
-      participant: undefined,
-      workshopGroup: undefined,
-      sessionToken: undefined,
-      isAuthenticated: false,
-    };
-  }
-
-  // Get session info
+  // Get session info first
   const sessionInfo = await SessionService.getSessionInfo(sessionToken);
   if (!sessionInfo) {
     return {
@@ -51,6 +40,9 @@ export const sessionMiddleware = new Elysia({ name: 'session' }).derive(async ({
       isAuthenticated: false,
     };
   }
+
+  // Update session activity (heartbeat) - only if session exists
+  await SessionService.updateSessionActivity(sessionToken);
 
   return {
     participant: sessionInfo.participant,
@@ -110,25 +102,21 @@ export class SessionHelpers {
     sessionToken: string,
     maxAge: number = env.SESSION_MAX_AGE
   ): void {
-    cookie['session_token'] = {
-      value: sessionToken,
-      httpOnly: true,
-      secure: env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge,
-      path: '/',
-    };
+    cookie.session_token.value = sessionToken;
+    cookie.session_token.httpOnly = true;
+    cookie.session_token.secure = env.NODE_ENV === 'production';
+    cookie.session_token.sameSite = 'lax';
+    cookie.session_token.maxAge = maxAge;
+    cookie.session_token.path = '/';
   }
 
   /**
    * Clear session cookie
    */
   static clearSessionCookie(cookie: Record<string, any>): void {
-    cookie['session_token'] = {
-      value: '',
-      maxAge: 0,
-      path: '/',
-    };
+    cookie.session_token.value = '';
+    cookie.session_token.maxAge = 0;
+    cookie.session_token.path = '/';
   }
 
   /**

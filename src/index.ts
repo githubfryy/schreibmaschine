@@ -28,7 +28,7 @@ const app = new Elysia()
     prefix: '',
     
   }))
-
+ 
   // Global plugins
   .use(html())
 

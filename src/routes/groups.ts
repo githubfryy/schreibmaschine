@@ -318,7 +318,7 @@ export const groupRoutes = new Elysia()
             // TODO: Load real participants from database
             { display_name: 'Du (Teamer)', role: 'teamer', online: true, is_current_user: true },
           ],
-          activities: await new ActivityService().getActivitiesForGroup(resolved.workshop_group.id),
+          activities: await ActivityService.getActivitiesForGroup(resolved.workshop_group.id),
           online_count: 1, // TODO: Get real online count
         };
 

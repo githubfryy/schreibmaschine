@@ -1,6 +1,6 @@
 import { Elysia } from 'elysia';
 import { env } from '@/config/env';
-import { sessionMiddleware } from '@/middleware/session';
+import { sessionMiddleware, requireAuth } from '@/middleware/session';
 import { SessionService } from '@/services/session.service';
 import type { OnlineStatusEvent, SSEEvent } from '@/types/api';
 
@@ -204,6 +204,73 @@ setInterval(() => {
  */
 export const sseRoutes = new Elysia({ name: 'sse' })
   .use(sessionMiddleware)
+  
+  // Simple test SSE endpoint (no auth required for testing)
+  .get('/api/test-sse', ({ set }) => {
+    // Set SSE headers
+    set.headers = {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Cache-Control',
+    };
+
+    // Create readable stream for SSE
+    const stream = new ReadableStream({
+      start(controller) {
+        // Send initial connection event
+        const initialEvent = {
+          type: 'connected',
+          data: {
+            message: 'SSE Test connection established',
+            timestamp: new Date().toISOString(),
+          },
+          timestamp: new Date().toISOString(),
+        };
+
+        controller.enqueue(`data: ${JSON.stringify(initialEvent)}\n\n`);
+
+        // Send periodic test events
+        let counter = 0;
+        const interval = setInterval(() => {
+          counter++;
+          const testEvent = {
+            type: 'test',
+            data: {
+              counter,
+              message: `Test message ${counter}`,
+              timestamp: new Date().toISOString(),
+            },
+            timestamp: new Date().toISOString(),
+          };
+
+          try {
+            controller.enqueue(`data: ${JSON.stringify(testEvent)}\n\n`);
+          } catch (error) {
+            // Connection closed
+            clearInterval(interval);
+          }
+        }, 2000); // Send test event every 2 seconds
+
+        // Clean up after 30 seconds
+        setTimeout(() => {
+          clearInterval(interval);
+          try {
+            controller.close();
+          } catch (error) {
+            // Connection already closed
+          }
+        }, 30000);
+      },
+
+      cancel() {
+        console.log('📡 SSE test connection cancelled');
+      },
+    });
+
+    return new Response(stream);
+  })
 
   // Main SSE endpoint for group updates
   .get(
@@ -275,21 +342,15 @@ export const sseRoutes = new Elysia({ name: 'sse' })
   )
 
   // Trigger online status update (for testing)
+  .use(requireAuth)
   .post(
     '/api/groups/:groupId/events/refresh',
     async ({
       params,
-      isAuthenticated,
-      set,
     }: {
       params: { groupId: string };
-      isAuthenticated: boolean;
-      set: any;
     }) => {
-      if (!isAuthenticated) {
-        set.status = 401;
-        return { error: 'Authentication required' };
-      }
+      // Authentication handled by requireAuth middleware
 
       await SSEManager.broadcastOnlineStatus(params.groupId);
 

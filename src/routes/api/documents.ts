@@ -1,24 +1,43 @@
-import { Elysia } from 'elysia';
-import { z } from 'zod';
-import { sessionMiddleware } from '../../middleware/session';
+import { Elysia, t } from 'elysia';
+import { requireAuth } from '../../middleware/session';
 import { DocumentService } from '../../services/document.service';
 
-// Input validation schemas
-const IndividualDocumentSchema = z.object({
-  groupId: z.string(),
-  content: z.string(),
-  activityId: z.string().optional(),
-});
-
-const CollaborativeDocumentSchema = z.object({
-  documentId: z.string(),
-  operations: z.array(z.unknown()), // Loro operations will be validated separately
-  baseVersion: z.number(),
-});
+// Input validation models  
+const DocumentModel = {
+  individual: t.Object({
+    groupId: t.String(),
+    content: t.String(),
+    activityId: t.Optional(t.String()),
+  }),
+  
+  collaborative: t.Object({
+    documentId: t.String(),
+    operations: t.Array(t.Any()), // Loro operations will be validated separately
+    baseVersion: t.Number(),
+  }),
+  
+  params: {
+    groupId: t.Object({ groupId: t.String() }),
+    documentId: t.Object({ documentId: t.String() }),
+    activityId: t.Object({ activityId: t.String() }),
+    export: t.Object({ 
+      groupId: t.String(), 
+      format: t.Union([
+        t.Literal('markdown'),
+        t.Literal('html'), 
+        t.Literal('json')
+      ])
+    }),
+  },
+};
 
 export const documentsRoutes = new Elysia({ prefix: '/documents' })
-  .use(sessionMiddleware)
+  .use(requireAuth)
   .decorate('documentService', new DocumentService())
+  .model({
+    'document.individual': DocumentModel.individual,
+    'document.collaborative': DocumentModel.collaborative,
+  })
 
   // Save individual writing
   .post(
@@ -28,23 +47,22 @@ export const documentsRoutes = new Elysia({ prefix: '/documents' })
       documentService,
       participant,
     }: {
-      body: unknown;
+      body: typeof DocumentModel.individual.static;
       documentService: DocumentService;
       participant?: import('../../types/database').Participant;
     }) => {
-      if (!participant?.id) {
-        throw new Error('Authentication required');
-      }
-
-      const validated = IndividualDocumentSchema.parse(body);
+      // Authentication handled by requireAuth middleware
       const document = await documentService.saveIndividualDocument(
-        participant.id,
-        validated.groupId,
-        validated.content,
-        validated.activityId
+        participant!.id,
+        body.groupId,
+        body.content,
+        body.activityId
       );
 
       return { document };
+    },
+    {
+      body: 'document.individual',
     }
   )
 
@@ -60,11 +78,8 @@ export const documentsRoutes = new Elysia({ prefix: '/documents' })
       documentService: DocumentService;
       participant?: import('../../types/database').Participant;
     }) => {
-      if (!participant?.id) {
-        throw new Error('Authentication required');
-      }
-
-      const document = await documentService.getIndividualDocument(participant.id, params.groupId);
+      // Authentication handled by requireAuth middleware
+      const document = await documentService.getIndividualDocument(participant!.id, params.groupId);
 
       return { document };
     }
@@ -82,17 +97,14 @@ export const documentsRoutes = new Elysia({ prefix: '/documents' })
       documentService: DocumentService;
       participant?: import('../../types/database').Participant;
     }) => {
-      if (!participant?.id) {
-        throw new Error('Authentication required');
-      }
-
+      // Authentication handled by requireAuth middleware
       const document = await documentService.getCollaborativeDocument(params.documentId);
       if (!document) {
         throw new Error('Document not found');
       }
 
       // Check if participant has access to this document
-      const hasAccess = await documentService.hasDocumentAccess(params.documentId, participant.id);
+      const hasAccess = await documentService.hasDocumentAccess(params.documentId, participant!.id);
       if (!hasAccess) {
         throw new Error('Access denied');
       }
@@ -111,30 +123,29 @@ export const documentsRoutes = new Elysia({ prefix: '/documents' })
       participant,
     }: {
       params: { documentId: string };
-      body: unknown;
+      body: typeof DocumentModel.collaborative.static;
       documentService: DocumentService;
       participant?: import('../../types/database').Participant;
     }) => {
-      if (!participant?.id) {
-        throw new Error('Authentication required');
-      }
-
-      const validated = CollaborativeDocumentSchema.parse(body);
-
+      // Authentication handled by requireAuth middleware
       // Check access
-      const hasAccess = await documentService.hasDocumentAccess(params.documentId, participant.id);
+      const hasAccess = await documentService.hasDocumentAccess(params.documentId, participant!.id);
       if (!hasAccess) {
         throw new Error('Access denied');
       }
 
       const result = await documentService.applyCollaborativeOperations(
         params.documentId,
-        participant.id,
-        validated.operations,
-        validated.baseVersion
+        participant!.id,
+        body.operations,
+        body.baseVersion
       );
 
       return result;
+    },
+    {
+      params: DocumentModel.params.documentId,
+      body: 'document.collaborative',
     }
   )
 
@@ -144,24 +155,14 @@ export const documentsRoutes = new Elysia({ prefix: '/documents' })
     async ({
       params,
       documentService,
-      participant,
       set,
     }: {
-      params: { groupId: string; format: string };
+      params: typeof DocumentModel.params.export.static;
       documentService: DocumentService;
-      participant?: import('../../types/database').Participant;
       set: any;
     }) => {
-      if (!participant?.id) {
-        throw new Error('Authentication required');
-      }
-
-      const format = params.format as 'markdown' | 'html' | 'json';
-      if (!['markdown', 'html', 'json'].includes(format)) {
-        throw new Error('Invalid export format');
-      }
-
-      const exportData = await documentService.exportGroupDocuments(params.groupId, format);
+      // Authentication handled by requireAuth middleware
+      const exportData = await documentService.exportGroupDocuments(params.groupId, params.format);
 
       // Set appropriate content type
       const contentTypes = {
@@ -170,10 +171,13 @@ export const documentsRoutes = new Elysia({ prefix: '/documents' })
         json: 'application/json',
       };
 
-      set.headers['Content-Type'] = contentTypes[format];
-      set.headers['Content-Disposition'] = `attachment; filename="schreibgruppe-export.${format}"`;
+      set.headers['Content-Type'] = contentTypes[params.format];
+      set.headers['Content-Disposition'] = `attachment; filename="schreibgruppe-export.${params.format}"`;
 
       return exportData;
+    },
+    {
+      params: DocumentModel.params.export,
     }
   )
 
@@ -189,14 +193,11 @@ export const documentsRoutes = new Elysia({ prefix: '/documents' })
       documentService: DocumentService;
       participant?: import('../../types/database').Participant;
     }) => {
-      if (!participant?.id) {
-        throw new Error('Authentication required');
-      }
-
+      // Authentication handled by requireAuth middleware
       // Check if user is teamer (will be checked in service)
       const documents = await documentService.getActivityDocuments(
         params.activityId,
-        participant.id
+        participant!.id
       );
 
       return { documents };
@@ -215,11 +216,8 @@ export const documentsRoutes = new Elysia({ prefix: '/documents' })
       documentService: DocumentService;
       participant?: import('../../types/database').Participant;
     }) => {
-      if (!participant?.id) {
-        throw new Error('Authentication required');
-      }
-
-      const hasAccess = await documentService.canDeleteDocument(params.documentId, participant.id);
+      // Authentication handled by requireAuth middleware
+      const hasAccess = await documentService.canDeleteDocument(params.documentId, participant!.id);
       if (!hasAccess) {
         throw new Error('Access denied');
       }
@@ -233,10 +231,7 @@ export const documentsRoutes = new Elysia({ prefix: '/documents' })
   .onError(({ error, set }: { error: any; set: any }) => {
     console.error('Document API error:', error);
 
-    if (error.message === 'Authentication required') {
-      set.status = 401;
-      return { error: 'Authentication required' };
-    }
+    // Authentication errors handled by requireAuth middleware
 
     if (error.message === 'Document not found') {
       set.status = 404;
@@ -253,11 +248,7 @@ export const documentsRoutes = new Elysia({ prefix: '/documents' })
       return { error: 'Invalid export format. Use: markdown, html, json' };
     }
 
-    // Validation errors
-    if (error.name === 'ZodError') {
-      set.status = 400;
-      return { error: 'Invalid input', details: error.errors };
-    }
+    // Validation errors (Elysia handles these automatically)
 
     // Internal server error
     set.status = 500;

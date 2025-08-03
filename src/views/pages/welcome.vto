@@ -1,66 +1,35 @@
 {{ layout "layouts/base.vto" }}
 
-<!-- Hero Section -->
-<section class="hero">
-  <div class="hero-content">
-    <h1 class="hero-title">Schreibmaschine</h1>
-    <p class="hero-subtitle">Kollaborative Schreibwerkstätten für kreative Köpfe</p>
-    <p class="hero-description">
-      Ein lokaler Raum für gemeinsames Schreiben, strukturierte Übungen und kreative Entfaltung
-    </p>
-  </div>
-</section>
+{{# Set layout variables with separate statements #}}
 
-<!-- Features Grid -->
-<section class="features">
-  <div class="container">
-    <div class="features-grid">
-      <div class="feature-card">
-        <h3>Gemeinsam schreiben</h3>
-        <p>Kollaborative Texterstellung in Echtzeit mit anderen Teilnehmern</p>
-      </div>
-      
-      <div class="feature-card">
-        <h3>Strukturierte Übungen</h3>
-        <p>Angeleitete Aktivitäten für alle Erfahrungsstufen und Genres</p>
-      </div>
-      
-      <div class="feature-card">
-        <h3>Lokal & sicher</h3>
-        <p>Läuft offline in eurer Workshop-Umgebung ohne externe Abhängigkeiten</p>
-      </div>
-    </div>
-  </div>
-</section>
+<h2>Willkommen bei Schreibmaschine</h2>
 
 {{ if environment === "development" }}
-<!-- Development Info -->
-<section class="dev-section">
-  <div class="container">
-    <div class="dev-card">
+{{# Development Info #}}
+<section>
+  <div>
+    <div>
       <h3>Entwicklungsmodus aktiv</h3>
-      <div class="dev-grid">
-        <div class="dev-item">
-          <span class="dev-label">Umgebung</span>
-          <span class="dev-value">{{ environment }}</span>
+      <div>
+        <div>
+          <span>Umgebung</span>
+          <span>{{ environment }}</span>
         </div>
-        <div class="dev-item">
-          <span class="dev-label">Server</span>
-          <span class="dev-value">localhost:{{ port }}</span>
+        <div>
+          <span>Server</span>
+          <span>localhost:{{ port }}</span>
         </div>
-        <div class="dev-item">
-          <span class="dev-label">Runtime</span>
-          <span class="dev-value">Bun {{ bun_version }}</span>
+        <div>
+          <span>Runtime</span>
+          <span>Bun {{ bun_version }}</span>
         </div>
       </div>
       
-      <div class="dev-actions">
-        <a href="/admin" class="btn-link">Admin-Bereich →</a>
-        <a href="/api/health" class="btn-link">API Status →</a>
+      <div>
+        <a href="/admin">Admin-Bereich →</a>
+        <a href="/api/health">API Status →</a>
       </div>
     </div>
   </div>
 </section>
 {{ /if }}
-
-{{ /layout }}
