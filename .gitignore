@@ -15,6 +15,9 @@ ideas/
 # Dependencies
 node_modules/
 
+# Database files (local development only)
+data/
+
 # Build outputs
 dist/
 build/
