@@ -1,0 +1,19 @@
+Use `{{#` to start a comment and `#}}` to end it. The commented code will be ignored by Vento.
+```
+{{# This is a comment! #}}
+```
+
+
+## [Trimming spaces](#trimming-spaces)
+
+
+Like other tags, it's possible to trim the space after and/or before a comment using the `-` character.
+```
+<h1>
+  {{#- This is a comment! -#}}
+</h1>
+```
+The result is:
+```
+<h1></h1>
+```

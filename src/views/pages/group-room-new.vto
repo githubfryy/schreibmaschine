@@ -1,0 +1,485 @@
+{{/* 
+  Modern Group Room Page - VentoJS + Alpine.js Integration
+  Based on Frontend Implementation Strategy patterns
+*/}}
+
+{{ import { button, iconButton, buttonGroup } from "../components/ui/button.vto" }}
+{{ import { modal, confirmModal, modalTrigger, modalHelperScript } from "../components/ui/modal.vto" }}
+{{ import { notificationContainer } from "../components/ui/notification.vto" }}
+{{ import { participantSidebar, participantSidebarScript } from "../components/workshop/participant-sidebar.vto" }}
+{{ import { activityWorkspace } from "../components/activities/activity-components.vto" }}
+
+{{ layout "layouts/base.vto" {
+  pageTitle: workshop.title + " - " + group.title,
+  pageClass: "group-room",
+  showHeader: true,
+  additionalCSS: "group-room",
+  additionalJS: "workshop-room",
+  alpineData: `workshopRoom({
+    groupId: '${group.id}',
+    participantId: '${currentParticipant.id}',
+    isTeamer: ${currentParticipant.role === 'teamer'}
+  })`
+} }}
+
+<div class="workshop-interface container">
+  
+  {{/* Session Header */}}
+  <header class="session-header">
+    <div class="session-info">
+      <div class="breadcrumb">
+        <span class="workshop-name">{{ workshop.title }}</span>
+        <span class="breadcrumb-separator">→</span>
+        <span class="current-location">{{ group.title }}</span>
+      </div>
+      
+      <h1 class="group-title text-balance">{{ group.title }}</h1>
+      
+      {{ if group.description }}
+        <p class="group-description text-pretty">{{ group.description }}</p>
+      {{ /if }}
+    </div>
+    
+    {{/* Live Status Bar */}}
+    <div class="status-bar" x-data="{ showDetails: false }">
+      <div class="status-items">
+        <div class="status-item">
+          <span class="status-icon" :class="{ 'connected': isConnected, 'disconnected': !isConnected }">
+            <span x-show="isConnected">🟢</span>
+            <span x-show="!isConnected">🔴</span>
+          </span>
+          <span class="status-text" x-text="isConnected ? 'Verbunden' : 'Getrennt'"></span>
+        </div>
+        
+        <div class="status-item">
+          <span class="status-icon">👥</span>
+          <span class="status-text" x-text="onlineCount + ' online'"></span>
+        </div>
+        
+        {{ if currentParticipant.role === 'teamer' }}
+          <div class="status-item">
+            <span class="status-icon">⚡</span>
+            <span class="status-text" x-text="activeActivity ? 'Activity läuft' : 'Keine Activity'"></span>
+          </div>
+        {{ /if }}
+      </div>
+      
+      <div class="status-actions">
+        {{ if currentParticipant.role === 'teamer' }}
+          {{ modalTrigger('create-activity', 'Activity erstellen', {
+            buttonVariant: 'primary',
+            buttonSize: 'sm'
+          }) }}
+        {{ /if }}
+        
+        {{ iconButton('⚙', {
+          ariaLabel: 'Einstellungen',
+          variant: 'ghost',
+          size: 'sm',
+          onClick: 'showSettings()'
+        }) }}
+      </div>
+    </div>
+  </header>
+
+  {{/* Loading State */}}
+  <div x-show="isLoading" 
+       class="loading-state"
+       x-transition>
+    <div class="loading-content">
+      <div class="loading-spinner"></div>
+      <h3>Lade Schreibraum...</h3>
+      <p>Verbinde mit anderen Teilnehmern und lade Aktivitäten</p>
+    </div>
+  </div>
+
+  {{/* Main Workshop Layout */}}
+  <div x-show="!isLoading" 
+       class="workshop-layout writing-layout"
+       x-transition:enter.duration.300ms>
+    
+    {{/* Participant Sidebar */}}
+    {{ participantSidebar(participants, currentParticipant, {
+      isTeamer: currentParticipant.role === 'teamer',
+      showOnlineStatus: true,
+      className: 'workshop-sidebar'
+    }) }}
+    
+    {{/* Main Activity Area */}}
+    <main class="activity-main">
+      
+      {{/* Quick Actions Bar */}}
+      <div class="quick-actions" x-show="activities.length > 0">
+        <div class="action-group">
+          <span class="action-label">Schnellzugriff:</span>
+          
+          <template x-for="activity in activities.slice(0, 3)" :key="activity.id">
+            <button class="quick-action-btn"
+                    :class="{
+                      'quick-action-btn--active': activity.status === 'active',
+                      'quick-action-btn--completed': activity.status === 'completed'
+                    }"
+                    @click="openActivityQuick(activity.id)"
+                    x-text="activity.title"></button>
+          </template>
+          
+          <button x-show="activities.length > 3"
+                  class="quick-action-btn quick-action-btn--more"
+                  @click="showAllActivities = !showAllActivities"
+                  x-text="showAllActivities ? 'Weniger' : `+${activities.length - 3} mehr`"></button>
+        </div>
+      </div>
+      
+      {{/* Activity Workspace */}}
+      {{ activityWorkspace(activities, currentParticipant, {
+        className: 'main-workspace'
+      }) }}
+      
+      {{/* Real-time Activity Status */}}
+      <div class="activity-status-bar" x-show="activeActivity">
+        <div class="status-content">
+          <div class="activity-info">
+            <h4 x-text="activeActivity?.title"></h4>
+            <p class="activity-type" x-text="translateActivityType(activeActivity?.type)"></p>
+          </div>
+          
+          <div class="activity-participants" x-show="activeActivity?.participants">
+            <span class="participants-label">Aktiv:</span>
+            <template x-for="participant in activeActivity.participants.slice(0, 3)" :key="participant.id">
+              <span class="participant-badge" x-text="participant.display_name"></span>
+            </template>
+            <span x-show="activeActivity.participants.length > 3" 
+                  class="participant-count"
+                  x-text="`+${activeActivity.participants.length - 3} weitere`"></span>
+          </div>
+          
+          {{ if currentParticipant.role === 'teamer' }}
+            <div class="teamer-controls">
+              <button class="control-btn"
+                      @click="pauseActivity(activeActivity.id)"
+                      x-show="activeActivity?.status === 'active'">
+                ⏸ Pausieren
+              </button>
+              
+              <button class="control-btn"
+                      @click="resumeActivity(activeActivity.id)"
+                      x-show="activeActivity?.status === 'paused'">
+                ▶ Fortsetzen
+              </button>
+              
+              <button class="control-btn control-btn--danger"
+                      @click="endActivity(activeActivity.id)">
+                ⏹ Beenden
+              </button>
+            </div>
+          {{ /if }}
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+{{/* Modals */}}
+
+{{/* Create Activity Modal */}}
+<div x-data="createActivityModal()">
+  {{ modal('create-activity', 'Neue Activity erstellen', `
+    <form @submit.prevent="createActivity()" class="create-activity-form">
+      <div class="form-group">
+        <label for="activity-title" class="form-label">Titel *</label>
+        <input type="text" 
+               id="activity-title"
+               x-model="title" 
+               class="input"
+               placeholder="z.B. Gemeinsames Gedicht"
+               required>
+      </div>
+      
+      <div class="form-group">
+        <label for="activity-type" class="form-label">Typ *</label>
+        <select id="activity-type" x-model="type" class="input" required>
+          <option value="">Typ auswählen...</option>
+          <option value="individual_pad">Einzelschreibfeld - Jeder schreibt für sich</option>
+          <option value="collaborative_pad">Gemeinschaftsfeld - Alle schreiben zusammen</option>
+          <option value="rhyming_chain">Reimkette - Abwechselnd reimen</option>
+          <option value="paper_drawing">Papier ziehen - Verschiedene Aufgaben</option>
+          <option value="timed_writing">Zeitschreibung - Mit Timer</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="activity-description" class="form-label">Beschreibung</label>
+        <textarea id="activity-description"
+                  x-model="description" 
+                  class="input"
+                  rows="3"
+                  placeholder="Optionale Beschreibung der Aufgabe..."></textarea>
+      </div>
+      
+      <div class="form-group" x-show="type === 'timed_writing'">
+        <label for="time-limit" class="form-label">Zeitlimit (Minuten)</label>
+        <input type="number" 
+               id="time-limit"
+               x-model.number="timeLimit" 
+               class="input"
+               min="1"
+               max="120"
+               placeholder="z.B. 10">
+      </div>
+      
+      <div class="form-group" x-show="type === 'rhyming_chain'">
+        <label class="form-label flex items-center gap-2">
+          <input type="checkbox" 
+                 x-model="allowSkip" 
+                 class="checkbox">
+          <span>Runden überspringen erlauben</span>
+        </label>
+      </div>
+    </form>
+  `, {
+    size: 'md',
+    actions: [
+      {
+        label: 'Abbrechen',
+        variant: 'ghost',
+        onClick: 'resetForm(); open = false'
+      },
+      {
+        label: 'Activity erstellen',
+        variant: 'primary',
+        onClick: 'createActivity()'
+      }
+    ]
+  }) }}
+</div>
+
+{{/* Settings Modal */}}
+{{ modal('workshop-settings', 'Workshop-Einstellungen', `
+  <div class="settings-content">
+    <div class="setting-section">
+      <h4>Benachrichtigungen</h4>
+      <label class="setting-toggle">
+        <input type="checkbox" x-model="settings.soundEnabled">
+        <span>Sounds für Benachrichtigungen</span>
+      </label>
+      <label class="setting-toggle">
+        <input type="checkbox" x-model="settings.notificationsEnabled">
+        <span>Desktop-Benachrichtigungen</span>
+      </label>
+    </div>
+    
+    <div class="setting-section">
+      <h4>Anzeige</h4>
+      <label class="setting-toggle">
+        <input type="checkbox" x-model="settings.compactMode">
+        <span>Kompakte Ansicht</span>
+      </label>
+      <label class="setting-toggle">
+        <input type="checkbox" x-model="settings.showTypingIndicators">
+        <span>Eingabe-Indikatoren anzeigen</span>
+      </label>
+    </div>
+  </div>
+`, {
+  size: 'md',
+  actions: [
+    {
+      label: 'Speichern',
+      variant: 'primary',
+      onClick: 'saveSettings(); open = false'
+    }
+  ]
+}) }}
+
+{{/* Confirm Activity End Modal */}}
+{{ confirmModal('confirm-end-activity', 
+  'Activity beenden?', 
+  'Diese Activity wird für alle Teilnehmer beendet. Die Inhalte bleiben gespeichert.',
+  {
+    confirmText: 'Beenden',
+    cancelText: 'Abbrechen',
+    confirmVariant: 'error',
+    onConfirm: 'confirmEndActivity()'
+  }
+) }}
+
+{{/* Notification System */}}
+{{ notificationContainer({ position: 'bottom-right' }) }}
+
+{{/* JavaScript Components */}}
+<script>
+// Create Activity Modal Component
+Alpine.data('createActivityModal', () => ({
+  title: '',
+  type: '',
+  description: '',
+  timeLimit: 10,
+  allowSkip: true,
+  
+  resetForm() {
+    this.title = '';
+    this.type = '';
+    this.description = '';
+    this.timeLimit = 10;
+    this.allowSkip = true;
+  },
+  
+  async createActivity() {
+    if (!this.title.trim() || !this.type) {
+      this.$dispatch('notify', {
+        message: 'Bitte füllen Sie alle Pflichtfelder aus',
+        type: 'error'
+      });
+      return;
+    }
+    
+    try {
+      const response = await this.$ajax('/api/activities', {
+        method: 'POST',
+        body: {
+          title: this.title.trim(),
+          type: this.type,
+          description: this.description.trim(),
+          timeLimit: this.type === 'timed_writing' ? this.timeLimit : null,
+          allowSkip: this.type === 'rhyming_chain' ? this.allowSkip : null,
+          workshop_group_id: Alpine.store('workshopRoom')?.groupId
+        }
+      });
+      
+      this.$dispatch('notify', {
+        message: `Activity "${this.title}" wurde erstellt`,
+        type: 'success'
+      });
+      
+      this.$dispatch('activity:created', response.activity);
+      this.resetForm();
+      this.$dispatch('close-modal', { id: 'create-activity' });
+      
+    } catch (error) {
+      this.$dispatch('notify', {
+        message: 'Fehler beim Erstellen der Activity',
+        type: 'error'
+      });
+    }
+  }
+}));
+
+// Workshop Room Settings
+Alpine.data('workshopSettings', () => ({
+  settings: {
+    soundEnabled: true,
+    notificationsEnabled: true,
+    compactMode: false,
+    showTypingIndicators: true
+  },
+  
+  init() {
+    this.loadSettings();
+  },
+  
+  loadSettings() {
+    const saved = localStorage.getItem('workshop-settings');
+    if (saved) {
+      this.settings = { ...this.settings, ...JSON.parse(saved) };
+    }
+  },
+  
+  saveSettings() {
+    localStorage.setItem('workshop-settings', JSON.stringify(this.settings));
+    this.$dispatch('notify', {
+      message: 'Einstellungen gespeichert',
+      type: 'success',
+      duration: 2000
+    });
+  }
+}));
+
+// Global helper functions for the workshop room
+window.workshopRoomHelpers = {
+  translateActivityType(type) {
+    const typeMap = {
+      individual_pad: 'Einzelschreibfeld',
+      collaborative_pad: 'Gemeinschaftsfeld',
+      rhyming_chain: 'Reimkette',
+      paper_drawing: 'Papier ziehen',
+      timed_writing: 'Zeitschreibung'
+    };
+    return typeMap[type] || type;
+  },
+  
+  showSettings() {
+    window.openModal('workshop-settings');
+  },
+  
+  openActivityQuick(activityId) {
+    // Quick open without full modal
+    const workshopRoom = Alpine.store('workshopRoom');
+    if (workshopRoom) {
+      workshopRoom.currentActivity = workshopRoom.activities.find(a => a.id === activityId);
+    }
+  },
+  
+  async pauseActivity(activityId) {
+    try {
+      await this.$ajax(`/api/activities/${activityId}/pause`, { method: 'POST' });
+      this.$dispatch('notify', {
+        message: 'Activity pausiert',
+        type: 'info'
+      });
+    } catch (error) {
+      this.$dispatch('notify', {
+        message: 'Fehler beim Pausieren',
+        type: 'error'
+      });
+    }
+  },
+  
+  async resumeActivity(activityId) {
+    try {
+      await this.$ajax(`/api/activities/${activityId}/resume`, { method: 'POST' });
+      this.$dispatch('notify', {
+        message: 'Activity fortgesetzt',
+        type: 'success'
+      });
+    } catch (error) {
+      this.$dispatch('notify', {
+        message: 'Fehler beim Fortsetzen',
+        type: 'error'
+      });
+    }
+  },
+  
+  endActivity(activityId) {
+    window.openModal('confirm-end-activity');
+    window.pendingEndActivityId = activityId;
+  },
+  
+  async confirmEndActivity() {
+    const activityId = window.pendingEndActivityId;
+    if (!activityId) return;
+    
+    try {
+      await this.$ajax(`/api/activities/${activityId}/end`, { method: 'POST' });
+      this.$dispatch('notify', {
+        message: 'Activity beendet',
+        type: 'success'
+      });
+      delete window.pendingEndActivityId;
+    } catch (error) {
+      this.$dispatch('notify', {
+        message: 'Fehler beim Beenden',
+        type: 'error'
+      });
+    }
+  }
+};
+
+// Make helper functions available globally for Alpine
+Object.assign(window, window.workshopRoomHelpers);
+</script>
+
+{{/* Include required scripts */}}
+{{ participantSidebarScript() }}
+{{ modalHelperScript() }}
+
+{{ /layout }}

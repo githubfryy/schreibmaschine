@@ -1,0 +1,320 @@
+{{/* 
+  Participant Sidebar Component - Real-time participant management
+  Based on workshop requirements and Alpine.js patterns
+*/}}
+
+{{ function participantSidebar(participants, currentParticipant, options = {}) }}
+  {{ set isTeamer = options.isTeamer || false }}
+  {{ set showOnlineStatus = options.showOnlineStatus !== false }}
+  {{ set className = options.className || '' }}
+  
+  <aside class="participant-sidebar {{ className }}"
+         x-data="participantSidebar('{{ currentParticipant.id }}', {{ isTeamer }})"
+         x-init="loadParticipants()">
+    
+    {{/* Sidebar Header */}}
+    <header class="participant-sidebar-header">
+      <h3 class="sidebar-title">Teilnehmer</h3>
+      
+      {{ if showOnlineStatus }}
+        <div class="online-status" x-data="{ count: {{ participants.length }} }">
+          <span class="online-indicator" 
+                :class="{ 'connected': isConnected, 'disconnected': !isConnected }"></span>
+          <span class="online-count" x-text="onlineCount + ' online'"></span>
+        </div>
+      {{ /if }}
+    </header>
+    
+    {{/* Participant List */}}
+    <div class="participant-list" role="list">
+      
+      {{/* Current Participant */}}
+      <div class="participant-item participant-item--current" role="listitem">
+        <div class="participant-avatar">
+          {{ participantAvatar(currentParticipant) }}
+        </div>
+        
+        <div class="participant-info">
+          <div class="participant-name">{{ currentParticipant.display_name }}</div>
+          <div class="participant-role">{{ currentParticipant.role | roleTranslation }} (Sie)</div>
+        </div>
+        
+        <div class="participant-status">
+          <span class="status-indicator status-indicator--online" 
+                aria-label="Online"></span>
+        </div>
+      </div>
+      
+      {{/* Other Participants */}}
+      <template x-for="participant in otherParticipants" :key="participant.id">
+        <div class="participant-item" 
+             :class="{ 
+               'participant-item--online': isParticipantOnline(participant.id),
+               'participant-item--typing': isParticipantTyping(participant.id)
+             }"
+             role="listitem">
+          
+          <div class="participant-avatar">
+            <div class="avatar" x-text="getInitials(participant.display_name)"></div>
+          </div>
+          
+          <div class="participant-info">
+            <div class="participant-name" x-text="participant.display_name"></div>
+            <div class="participant-role" x-text="translateRole(participant.role)"></div>
+            
+            {{/* Typing indicator */}}
+            <div class="typing-indicator" 
+                 x-show="isParticipantTyping(participant.id)"
+                 x-transition>
+              <span class="typing-text">tippt...</span>
+              <span class="typing-dots">
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+              </span>
+            </div>
+          </div>
+          
+          <div class="participant-status">
+            <span class="status-indicator" 
+                  :class="{
+                    'status-indicator--online': isParticipantOnline(participant.id),
+                    'status-indicator--offline': !isParticipantOnline(participant.id)
+                  }"
+                  :aria-label="isParticipantOnline(participant.id) ? 'Online' : 'Offline'"></span>
+          </div>
+          
+          {{/* Teamer Actions */}}
+          {{ if isTeamer }}
+            <div class="participant-actions" x-show="isTeamer">
+              <button type="button" 
+                      class="button button--ghost button--sm"
+                      @click="openParticipantMenu(participant)"
+                      :aria-label="`Aktionen für ${participant.display_name}`">
+                <span class="icon">⋯</span>
+              </button>
+            </div>
+          {{ /if }}
+        </div>
+      </template>
+      
+      {{/* Empty state */}}
+      <div x-show="otherParticipants.length === 0" 
+           class="empty-state"
+           x-transition>
+        <p class="empty-message">Warten auf weitere Teilnehmer...</p>
+      </div>
+    </div>
+    
+    {{/* Teamer Controls */}}
+    {{ if isTeamer }}
+      <footer class="participant-sidebar-footer" x-show="isTeamer">
+        <button type="button" 
+                class="button button--ghost button--sm w-full"
+                @click="$dispatch('open-modal', { id: 'invite-participants' })">
+          <span class="icon">+</span>
+          <span>Teilnehmer einladen</span>
+        </button>
+      </footer>
+    {{ /if }}
+  </aside>
+{{ /function }}
+
+{{ function participantAvatar(participant, options = {}) }}
+  {{ set size = options.size || 'md' }}
+  {{ set showStatus = options.showStatus !== false }}
+  {{ set className = options.className || '' }}
+  
+  <div class="avatar avatar--{{ size }} {{ className }}"
+       {{ if participant.avatar_url }}
+         style="background-image: url('{{ participant.avatar_url }}')"
+       {{ /if }}>
+    
+    {{ if !participant.avatar_url }}
+      <span class="avatar-initials">{{ participant.display_name | initials }}</span>
+    {{ /if }}
+    
+    {{ if showStatus }}
+      <span class="avatar-status" 
+            :class="{
+              'avatar-status--online': isParticipantOnline('{{ participant.id }}'),
+              'avatar-status--offline': !isParticipantOnline('{{ participant.id }}')
+            }"></span>
+    {{ /if }}
+  </div>
+{{ /function }}
+
+{{ function participantGrid(participants, options = {}) }}
+  {{ set showRoles = options.showRoles !== false }}
+  {{ set showStatus = options.showStatus !== false }}
+  {{ set className = options.className || '' }}
+  
+  <div class="participant-grid {{ className }}">
+    {{ for participant of participants }}
+      <div class="participant-card"
+           x-data="{ participant: {{ participant | json }} }">
+        
+        {{ participantAvatar(participant, { size: 'lg', showStatus }) }}
+        
+        <div class="participant-card-info">
+          <h4 class="participant-card-name">{{ participant.display_name }}</h4>
+          
+          {{ if showRoles }}
+            <p class="participant-card-role">{{ participant.role | roleTranslation }}</p>
+          {{ /if }}
+          
+          {{ if participant.last_seen }}
+            <p class="participant-card-activity">
+              {{ if showStatus }}
+                <span x-show="isParticipantOnline('{{ participant.id }}')">Online</span>
+                <span x-show="!isParticipantOnline('{{ participant.id }}')">
+                  Zuletzt: {{ participant.last_seen | timeAgo }}
+                </span>
+              {{ else }}
+                Zuletzt: {{ participant.last_seen | timeAgo }}
+              {{ /if }}
+            </p>
+          {{ /if }}
+        </div>
+      </div>
+    {{ /for }}
+  </div>
+{{ /function }}
+
+{{ function participantCount(count, options = {}) }}
+  {{ set showIcon = options.showIcon !== false }}
+  {{ set className = options.className || '' }}
+  
+  <div class="participant-count {{ className }}">
+    {{ if showIcon }}
+      <span class="participant-count-icon" aria-hidden="true">👥</span>
+    {{ /if }}
+    <span class="participant-count-text">
+      {{ count | participantCount }}
+    </span>
+  </div>
+{{ /function }}
+
+{{/* Real-time participant status component */}}
+{{ function participantStatusUpdates(groupId) }}
+  <div x-data="participantStatusTracker('{{ groupId }}')"
+       x-init="startTracking()"
+       class="participant-status-tracker">
+    
+    {{/* SSE Updates */}}
+    <div x-init="
+      eventSource = new EventSource('/api/sse/participants/{{ groupId }}');
+      
+      eventSource.addEventListener('participant:join', (event) => {
+        const participant = JSON.parse(event.data);
+        handleParticipantJoin(participant);
+      });
+      
+      eventSource.addEventListener('participant:leave', (event) => {
+        const { participantId } = JSON.parse(event.data);
+        handleParticipantLeave(participantId);
+      });
+      
+      eventSource.addEventListener('participant:typing', (event) => {
+        const { participantId, isTyping } = JSON.parse(event.data);
+        handleTypingStatus(participantId, isTyping);
+      });
+    "></div>
+  </div>
+{{ /function }}
+
+{{/* Alpine.js component definition */}}
+{{ function participantSidebarScript() }}
+  <script>
+    Alpine.data('participantSidebar', (currentParticipantId, isTeamer) => ({
+      currentParticipantId,
+      isTeamer,
+      participants: [],
+      onlineStatus: {},
+      typingStatus: {},
+      isConnected: false,
+      
+      init() {
+        this.loadParticipants();
+        this.setupSSE();
+      },
+      
+      get otherParticipants() {
+        return this.participants.filter(p => p.id !== this.currentParticipantId);
+      },
+      
+      get onlineCount() {
+        return Object.values(this.onlineStatus).filter(status => status === 'online').length + 1; // +1 for current user
+      },
+      
+      async loadParticipants() {
+        try {
+          const response = await this.$ajax('/api/participants/current-group');
+          this.participants = response.participants;
+          this.onlineStatus = response.onlineStatus;
+        } catch (error) {
+          console.error('Failed to load participants:', error);
+        }
+      },
+      
+      setupSSE() {
+        const eventSource = new EventSource('/api/sse/participants');
+        
+        eventSource.onopen = () => {
+          this.isConnected = true;
+        };
+        
+        eventSource.addEventListener('participant:status', (event) => {
+          const { participantId, status } = JSON.parse(event.data);
+          this.onlineStatus[participantId] = status;
+        });
+        
+        eventSource.addEventListener('participant:typing', (event) => {
+          const { participantId, isTyping } = JSON.parse(event.data);
+          this.typingStatus[participantId] = isTyping;
+        });
+        
+        eventSource.onerror = () => {
+          this.isConnected = false;
+        };
+      },
+      
+      isParticipantOnline(participantId) {
+        return this.onlineStatus[participantId] === 'online';
+      },
+      
+      isParticipantTyping(participantId) {
+        return this.typingStatus[participantId] === true;
+      },
+      
+      getInitials(name) {
+        return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+      },
+      
+      translateRole(role) {
+        const roleMap = {
+          participant: 'Teilnehmer',
+          teamer: 'Teamleitung'
+        };
+        return roleMap[role] || role;
+      },
+      
+      openParticipantMenu(participant) {
+        this.$dispatch('open-modal', {
+          id: 'participant-actions',
+          participant
+        });
+      }
+    }));
+  </script>
+{{ /function }}
+
+{{/* Export functions */}}
+{{ export { 
+  participantSidebar,
+  participantAvatar,
+  participantGrid,
+  participantCount,
+  participantStatusUpdates,
+  participantSidebarScript
+} }}

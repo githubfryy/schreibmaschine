@@ -1,0 +1,218 @@
+Custom properties - aka “CSS variables” - seem fairly straightforward. However, there are some behaviors to be aware of regarding how the browser computes the final values. A misunderstanding of this process may lead to an unexpected or missing value and difficulty troubleshooting and resolving the issue.
+To help you use custom properties confidently and troubleshoot efficiently, we’ll review:
+
+-   how the browser determines values for any property
+-   the impact of “computed value time”
+-   pitfalls around using custom properties with cutting-edge CSS
+-   why inheritance should inform your custom property architecture
+-   strategies to prevent invalid computed values
+
+When the browser parses CSS, its goal is to calculate one value per property per element in the DOM.
+Something you learn early on about CSS is that you can change a property’s value multiple times from multiple rules that may select the same element.
+Given the HTML `<h2>`, all of the following are eligible matches for the `color` property.
+```
+body {
+  color: #222;
+}
+
+h2 {
+  color: #74e;
+}
+
+.card__title {
+  color: #93b;
+}
+```
+Each of these are *declared* values, and due to specificity and the cascading order, the element’s final selected value may be the *cascaded* value. In this case, `.card__title` wins for the `color` property.
+If a property does not receive a value from the cascade, then it will use either the *inherited* or *initial* value.
+
+-   *Inherited* values come from the nearest ancestor that has assigned a value, if the property is [allowed to inherit](https://web.dev/learn/css/inheritance/#which-properties-are-inheritable) (ex. `color`, font properties, `text-align`)
+-   *Initial* values are used when no inherited value exists or is allowed and are the values provided by the specification for the property
+
+So, for `<h2>`, the full set of values populated for the element may be as follows:
+```
+.card__title {
+  /* Cascaded value */
+  color: #93b;
+
+  /* Initial properties and values */
+  display: block;
+
+  /* Inherited properties and values */
+  line-height: 1.2;
+  font-family: Source Code Pro;
+  font-weight: 500;
+  font-size: 1.35rem;
+}
+```
+Some property definitions require further computation to absolutize the values. The following are a few of the value transforms that may occur.
+
+1.  Relative units such as `vw`, `em`, and `%` are converted to pixel values, and floats may be converted to integers
+2.  `currentColor` and named colors like `rebeccapurple` are converted to an `sRGB` value
+3.  Compositing values that affect each other
+    1.  ex. `padding: 1em` requires computing the value for `font-size` that `em` depends on
+4.  custom properties are replaced with their computed values
+
+These transformations result in the *computed,used*, and actualvalues - which refer to the progressive steps that may be involved to end up with an absolutized value. You can dive deeper into the specifics of [how values are calculated](https://www.w3.org/TR/css-cascade-4/#value-stages) or check out this [review of value processing](https://www.matuzo.at/blog/2023/100daysof-day82/).
+One special computation scenario with a critical impact on modern CSS is when the browser assigns values to custom properties, referred to as “computed value time” (CVT).
+As described earlier, typically unfilled, or invalid property assignments will fall back to cascaded values when applicable.
+```
+/* Used due to the cascade */
+p { color: blue }
+
+/* Invalid as a "color", thrown out by the browser */
+.card p { color: #notacolor; }
+```
+Take a moment to see if you can determine what the `color` value of `.card p` will be in the following example.
+```
+html { color: red; }
+
+p { color: blue; }
+
+.card { --color: #notacolor; }
+
+.card p { color: var(--color); }
+```
+The `.card p` will be the *inherited* `color` value of `red` as provided by the `body`. It is unable to use the cascaded value of `blue` due to the browser discarding that as a possible value candidate at “parse time” when it is only evaluating syntax. It is only when the user agent attempts to apply the final value - the stage of “computed value time” - that it realizes the value is invalid.
+Said another way: once the browser determines the cascaded value, which is partially based on syntactic correctness, it will trash any other candidates. For syntactically correct custom properties, the browser essentially assumes the absolutized value will succeed in being valid.
+This leads to an inability for custom properties to “fail early”. When there is a failure, the resulting value will be either an inherited value from an ancestor or the initial value for the property. (*If this sounds familiar, it’s because it’s also [the behavior when using `unset`](https://developer.mozilla.org/en-US/docs/Web/CSS/unset).*)
+Critically, this means an invalid custom property value is unable to fall backto a previously set cascaded value, as you may expect, because those have been discarded from the decision tree.
+All hope is not lost! If later a utility class on the paragraph were to update the `color` property, then due to rules of the cascade and specificity it would win out like normal and the invalid custom property value wouldn’t have an effect.
+```
+html { color: red; }
+
+p { color: blue; }
+
+.card { --color: #notacolor; }
+
+/* Not used */
+.card p { color: var(--color); }
+
+/* Wins! */
+.card .callout { color: purple }
+```
+Note that when referring to invalid values for custom properties that what makes it invalid is how the value is applied. For example, a space character is a valid custom property definition, but will be invalid when applied to a property.
+```
+:root { 
+  /* Valid definition */
+  --toggle: ;
+}
+
+.card { 
+  /* Invalid at computed time */
+	margin: var(--toggle);
+}
+```
+On the other hand, a custom property with a value of `100%` may be applied to `width` but not `color`.
+```
+:root { 
+  --length: 100%;
+}
+
+.card { 
+  /* Valid */
+  width: var(--length);
+
+  /* Invalid at computed time */ 
+  color: var(--length);
+}
+```
+Another scenario where a custom property being invalid at computed value time may break your expectation is using the custom property as a partial value, or undefined with a fallback, especially paired with cutting-edge CSS features.
+Given the following, you may expect that when the `cqi` unit is not supported, the browser will simply use the prior `font-size` definition.
+```
+h2 {
+  font-size: clamp(1.25rem, var(--h2-fluid, 1rem + 1.5vw), 2.5rem);
+  font-size: clamp(1.25rem, var(--h2-fluid, 5cqi), 2.5rem);
+}
+```
+Instead, the browser assumes it will understand the second `clamp()` definition and discards the prior `font-size` definitions for this `h2` rule. But when the browser goes to populate the custom property value and finds it doesn’t support `cqi`, it’s too late to use what was intended as the fallback definition. This means it instead uses the initial value, if there is no inheritable value from an ancestor.
+While you might think that the *initial* value would at least be a `font-size` befitting the `h2` level, the initial value for any element’s `font-size` is “[medium](https://drafts.csswg.org/css2/#valdef-font-size-medium)” which is generally equivalent to `1rem`. This means you not only lose your intended fallback style, but also the visual hierarchy of the `h2` in browsers which do not support `cqi`.
+![Two type samples, where the top is in a browser that supports cqi and the font renders at a large size, whereas the bottom sample is in an unsupported browser for cqi and the font renders at the initial size of 1rem.](https://moderncss.dev/img/posts/33/cvt-cqi-support.png)
+One way to discover the `initial` value for any property is to [search for it on MDN](https://developer.mozilla.org/en-US/), and look for the “Formal Definition” section which will list the initial value, as well as whether the value is eligible for inheritance.
+A few `initial` values to be aware of besides `font-size`:
+
+-   `background-color`: `transparent`
+-   `border-color`: `currentColor`
+-   `border-width`: `medium` which equates to `3px`
+-   `color`: `canvastext` which is [a system color](https://developer.mozilla.org/en-US/docs/Web/CSS/system-color) and likely to be black, but may change due to forced-colors modes
+-   `font-family`: depends on user agent, likely to be a serif
+
+A safer solution is to wrap the definition using `cqi` in an `@supports` so that un-supporting browsers actually use the fallback.
+```
+h2 {
+  font-size: clamp(1.25rem, var(--h2-fluid, 1rem + 1.5vw), 2.5rem);
+}
+
+@supports (font-size: 1cqi) {
+  h2 {
+    font-size: clamp(1.25rem, var(--h2-fluid, 5cqi), 2.5rem);
+  }
+}
+```
+Does this mean you need to change every place you use custom properties? That all depends on your support matrix (which browsers and versions you have elected to support). For super-ultra-modern properties, especially when the initial value is undesirable, this approach may be the safest. Another example of when you may use an `@supports` condition is with new color spaces, like `oklch()`.
+
+> [Learn more about CSS feature detection](https://moderncss.dev/testing-feature-support-for-modern-css/) to help you choose the right route for your project.
+
+Confusingly, given a situation like the `cqi` example, browser dev tools for the un-supporting browser may still show the failing rule as being the applied style. This is likely because the browser may still support the other parts, like `clamp()`. An incorrect appearance in dev tools can make it difficult to troubleshoot issues caused by custom properties being invalid at computed time, which is why it’s important to fundamentally understand what is happening.
+Another way computed value time affects custom property value assignment is inheritance of computed values.
+Calculation of a custom property value is performed once per element, which then makes the computed value available for inheritance. Let’s learn how that impacts your custom property architecture choices.
+A common convention is batching custom properties into the `:root` selector. If one of those properties involves a calculation which includes another `:root`\-level custom property, then updating the modifying property from a descendent will not update the calculation.
+As in the following example, the `--font-size-large` is calculated immediately, so updating the `--font-size` property within a descendent rule will not be able to affect the value.
+CSS for "Computed values are immutable"
+```
+:root {
+  --font-size: 1rem;
+  --font-size-large: calc(2 * var(--font-size));
+}
+
+h1 {
+  --font-size: 1.25rem;
+
+  /* The new --font-size will not update the --font-size-large calculation */
+  font-size: var(--font-size-large);
+}
+```
+
+Cake muffin toffee gingerbread ice cream
+
+This is because the calculation happens as soon as the browser processes the definition against the `:root`. So the `:root` definition produces a static, computed value which is inheritable, but immutable.
+This is not to say this behavior is unique to `:root`. The key concept is that once custom property values are computed, the *computed value* is only inheritable.
+To think about it another way: within the cascade, values can be inherited by descendents, but can’t pass values back to their ancestors. Essentially this is why the computed custom property value on an ancestor element cannot be modified by a descendent element.
+If we lower the custom property calculation to be applied based on classes, then the browser will be able to recalculate as part of the value processing to determine the computed value. This is because it will calculate a value for elements with the class `font-resize`, and a separate value for elements with both `font-resize` and `font-large` classes.
+CSS for "Computed values are per element"
+```
+:root {
+  --font-size: 1rem;
+}
+
+.font-resize {
+  font-size: calc(var(--font-size-adjust, 1) * var(--font-size));
+}
+
+.font-large {
+  /* Successfully modifies the value when paired with .font-resize */
+  --font-size-adjust: 2.5;
+}
+```
+
+Cake muffin toffee gingerbread ice cream
+
+A few simple strategies to avoid custom property failure include:
+
+-   Use a fallback value when defining a custom property, which is the second value that can be provided to the `var()` function, ex. `var(--my-property, 1px)`
+-   Ensure fallback values within `var()` are of [the correct type](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Types) for the property, or [define your own with `@property`](#provide-a-custom-initial-value-with-property)
+-   If you’re using a polyfill for a new feature, check that it resolves usage in custom properties as you expect
+-   Use `@supports` to ensure your intended modern CSS upgrade doesn’t break intended fallback rules in un-supporting browsers
+
+And as always - test your solutions in as many browsers and on as many devices as you can!
+A cross-browser feature as of the release of Firefox 128 in July 2024 is a new at-rule - `@property` - which allows defining types for your custom properties.
+Helpfully, the `initial-value` parameter enables defining your own property-specific initial value which will be used in the event the computed value would otherwise be invalid!
+Given the following definition for our `--color-primary` custom property, if the computed value was invalid, the provided `initial-value` of `purple` would be used instead.
+```
+@property --color-primary {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: purple;
+}
+```
+Learn more about how to use `@property` in the Modern CSS article "[Providing Type Definitions for CSS with @property](https://moderncss.dev/providing-type-definitions-for-css-with-at-property/)."

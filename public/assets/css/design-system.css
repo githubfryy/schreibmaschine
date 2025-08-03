@@ -1,0 +1,852 @@
+/* Schreibmaschine Design System
+ * Modern CSS 2025 Architecture for Collaborative Writing Platform
+ * Based on comprehensive frontend strategy guide
+ */
+
+@layer theme, reset, layout, components, utilities, states;
+
+/* =====================================================
+   Theme Layer - Design Tokens & Variables
+   ===================================================== */
+
+@layer theme {
+  :root {
+    /* Color System - Workshop-optimized palette */
+    --primary: hsl(265, 38%, 13%);
+    --primary-light: hsl(265, 38%, 90%);
+    --primary-dark: hsl(265, 38%, 8%);
+    
+    --surface: hsl(270, 100%, 99%);
+    --surface-elevated: hsl(270, 50%, 98%);
+    --surface-hover: hsl(270, 30%, 96%);
+    
+    --text: hsl(220, 9%, 20%);
+    --text-muted: hsl(220, 9%, 46%);
+    --text-subtle: hsl(220, 9%, 70%);
+    
+    --accent: hsl(278, 100%, 92%);
+    --accent-strong: hsl(278, 100%, 85%);
+    
+    /* Semantic Colors */
+    --success: hsl(142, 76%, 36%);
+    --success-light: hsl(142, 76%, 90%);
+    --warning: hsl(38, 92%, 50%);
+    --warning-light: hsl(38, 92%, 90%);
+    --error: hsl(0, 84%, 60%);
+    --error-light: hsl(0, 84%, 90%);
+    --info: hsl(214, 84%, 56%);
+    --info-light: hsl(214, 84%, 90%);
+    
+    /* Typography Scale - Container query aware */
+    --text-xs: clamp(0.75rem, 2cqi, 0.875rem);
+    --text-sm: clamp(0.875rem, 2cqi, 1rem);
+    --text-base: clamp(1rem, 3cqi, 1.125rem);
+    --text-lg: clamp(1.125rem, 4cqi, 1.25rem);
+    --text-xl: clamp(1.25rem, 5cqi, 1.5rem);
+    --text-2xl: clamp(1.5rem, 6cqi, 2rem);
+    --text-3xl: clamp(2rem, 8cqi, 2.5rem);
+    
+    /* Font Weights */
+    --font-light: 300;
+    --font-normal: 400;
+    --font-medium: 500;
+    --font-semibold: 600;
+    --font-bold: 700;
+    
+    /* Spacing System - Fluid & responsive */
+    --space-xs: clamp(0.25rem, 1cqi, 0.5rem);
+    --space-sm: clamp(0.5rem, 2cqi, 1rem);
+    --space-md: clamp(1rem, 3cqi, 1.5rem);
+    --space-lg: clamp(1.5rem, 4cqi, 2rem);
+    --space-xl: clamp(2rem, 6cqi, 3rem);
+    --space-2xl: clamp(3rem, 8cqi, 4rem);
+    --space-3xl: clamp(4rem, 10cqi, 5rem);
+    
+    /* Layout Variables */
+    --container-max: 80ch;
+    --content-max: 65ch;
+    --sidebar-min: 20ch;
+    --sidebar-max: 30ch;
+    --grid-gap: var(--space-md);
+    
+    /* Workshop-Specific Dimensions */
+    --writing-area-max: 70ch;
+    --participant-card-min: 280px;
+    --activity-card-min: 320px;
+    --activity-gap: var(--space-lg);
+    --header-height: clamp(60px, 8vh, 80px);
+    
+    /* Border Radius System */
+    --radius-xs: 4px;
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --radius-round: 50%;
+    
+    /* Shadow System */
+    --shadow-sm: 0 1px 2px color-mix(in hsl, var(--primary), transparent 85%);
+    --shadow-md: 0 2px 8px color-mix(in hsl, var(--primary), transparent 85%);
+    --shadow-lg: 0 8px 25px color-mix(in hsl, var(--primary), transparent 75%);
+    --shadow-xl: 0 20px 40px color-mix(in hsl, var(--primary), transparent 70%);
+    
+    /* Transitions */
+    --transition-fast: 120ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-base: 180ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Z-Index Scale */
+    --z-dropdown: 10;
+    --z-modal: 50;
+    --z-notification: 100;
+    --z-tooltip: 1000;
+  }
+  
+  /* Dark mode support preparation */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --primary: hsl(265, 38%, 85%);
+      --surface: hsl(220, 13%, 13%);
+      --surface-elevated: hsl(220, 13%, 18%);
+      --text: hsl(220, 9%, 85%);
+      --text-muted: hsl(220, 9%, 65%);
+    }
+  }
+}
+
+/* =====================================================
+   Reset Layer - Modern CSS Reset
+   ===================================================== */
+
+@layer reset {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+  
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    font-size: var(--text-base);
+    line-height: 1.6;
+    color: var(--text);
+    background: var(--surface);
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    margin: 0;
+    font-weight: var(--font-semibold);
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+  
+  p, li {
+    text-wrap: pretty;
+    max-inline-size: 75ch;
+  }
+  
+  ul, ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  
+  img, picture, video, canvas, svg {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+  
+  input, button, textarea, select {
+    font: inherit;
+    color: inherit;
+  }
+  
+  button {
+    border: none;
+    background: none;
+    cursor: pointer;
+  }
+  
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+  
+  [hidden] {
+    display: none !important;
+  }
+  
+  /* Remove x-cloak during Alpine.js hydration */
+  [x-cloak] {
+    display: none !important;
+  }
+}
+
+/* =====================================================
+   Layout Layer - Structural Components
+   ===================================================== */
+
+@layer layout {
+  /* Container System */
+  .container {
+    width: min(100vw - var(--space-lg), var(--container-max));
+    margin-inline: auto;
+    container: main / inline-size;
+  }
+  
+  .content-container {
+    width: min(100% - var(--space-md), var(--content-max));
+    margin-inline: auto;
+  }
+  
+  .full-width {
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+  }
+  
+  /* Grid Layouts - Intrinsic & Responsive */
+  .auto-grid {
+    --grid-min: var(--participant-card-min);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--grid-min)), 1fr));
+    gap: var(--grid-gap);
+  }
+  
+  .activity-grid {
+    --activity-min: var(--activity-card-min);
+    --activity-gap: var(--activity-gap);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--activity-min)), 1fr));
+    gap: var(--activity-gap);
+    container: activities / inline-size;
+  }
+  
+  .writing-layout {
+    display: grid;
+    grid-template-columns: fit-content(var(--sidebar-min)) minmax(min(50vw, 30ch), 1fr);
+    gap: var(--space-lg);
+    align-items: start;
+  }
+  
+  @container activities (inline-size > 80ch) {
+    .activity-grid {
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    }
+  }
+  
+  @container activities (inline-size < 40ch) {
+    .activity-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  /* Flexbox Utilities */
+  .flex {
+    display: flex;
+  }
+  
+  .flex-col {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .flex-wrap {
+    flex-wrap: wrap;
+  }
+  
+  .items-center {
+    align-items: center;
+  }
+  
+  .items-start {
+    align-items: flex-start;
+  }
+  
+  .items-end {
+    align-items: flex-end;
+  }
+  
+  .justify-center {
+    justify-content: center;
+  }
+  
+  .justify-between {
+    justify-content: space-between;
+  }
+  
+  .justify-end {
+    justify-content: flex-end;
+  }
+  
+  .gap-xs { gap: var(--space-xs); }
+  .gap-sm { gap: var(--space-sm); }
+  .gap-md { gap: var(--space-md); }
+  .gap-lg { gap: var(--space-lg); }
+  .gap-xl { gap: var(--space-xl); }
+  
+  /* Stack Layout for Overlays */
+  .stack {
+    display: grid;
+    grid-template-areas: "stack";
+  }
+  
+  .stack > * {
+    grid-area: stack;
+  }
+  
+  /* Position Utilities */
+  .relative {
+    position: relative;
+  }
+  
+  .absolute {
+    position: absolute;
+  }
+  
+  .fixed {
+    position: fixed;
+  }
+  
+  .sticky {
+    position: sticky;
+  }
+  
+  /* Modern Centering */
+  .center {
+    display: grid;
+    place-content: center;
+  }
+  
+  .center-x {
+    display: grid;
+    place-content: center start;
+  }
+  
+  .center-y {
+    display: grid;
+    place-content: start center;
+  }
+}
+
+/* =====================================================
+   Components Layer - UI Building Blocks
+   ===================================================== */
+
+@layer components {
+  /* Activity Card Component */
+  .activity-card {
+    --card-padding: var(--space-md);
+    --card-radius: var(--radius-lg);
+    --card-shadow: var(--shadow-md);
+    --card-border: 1px solid color-mix(in hsl, var(--primary), transparent 90%);
+    
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    padding: var(--card-padding);
+    border-radius: var(--card-radius);
+    background: var(--surface-elevated);
+    box-shadow: var(--card-shadow);
+    border: var(--card-border);
+    
+    transition: all var(--transition-base);
+    
+    /* Prevent text overflow */
+    overflow-wrap: break-word;
+    hyphens: auto;
+    
+    /* Container query awareness */
+    container: card / inline-size;
+  }
+  
+  .activity-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+    border-color: color-mix(in hsl, var(--primary), transparent 70%);
+  }
+  
+  .activity-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-sm);
+  }
+  
+  .activity-title {
+    font-size: var(--text-lg);
+    font-weight: var(--font-semibold);
+    color: var(--text);
+    margin: 0;
+  }
+  
+  .activity-status {
+    font-size: var(--text-xs);
+    font-weight: var(--font-medium);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  
+  .status--setup {
+    background: var(--warning-light);
+    color: var(--warning);
+  }
+  
+  .status--active {
+    background: var(--success-light);
+    color: var(--success);
+  }
+  
+  .status--paused {
+    background: var(--info-light);
+    color: var(--info);
+  }
+  
+  .status--completed {
+    background: var(--text-subtle);
+    color: var(--text);
+  }
+  
+  /* Writing Interface Components */
+  .writing-area {
+    --writing-padding: var(--space-md);
+    --writing-radius: var(--radius-md);
+    --writing-border: 2px solid color-mix(in hsl, var(--primary), transparent 80%);
+    
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    padding: var(--writing-padding);
+    border-radius: var(--writing-radius);
+    background: var(--surface);
+    border: var(--writing-border);
+    
+    transition: border-color var(--transition-base);
+  }
+  
+  .writing-area:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px color-mix(in hsl, var(--primary), transparent 80%);
+  }
+  
+  .writing-textarea {
+    border: none;
+    background: transparent;
+    resize: vertical;
+    min-height: 120px;
+    font-family: inherit;
+    font-size: var(--text-base);
+    line-height: 1.6;
+    outline: none;
+    
+    /* Prevent mobile zoom */
+    font-size: max(16px, var(--text-base));
+  }
+  
+  .writing-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+  }
+  
+  /* Form Controls */
+  .input {
+    font-size: max(16px, var(--text-base)); /* Prevent mobile zoom */
+    font-family: inherit;
+    padding: var(--space-sm) var(--space-md);
+    border: 2px solid color-mix(in hsl, var(--text), transparent 70%);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    transition: border-color var(--transition-base), box-shadow var(--transition-base);
+    width: 100%;
+  }
+  
+  .input:focus {
+    border-color: var(--primary);
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in hsl, var(--primary), transparent 80%);
+  }
+  
+  .input:invalid {
+    border-color: var(--error);
+  }
+  
+  .input:invalid:focus {
+    box-shadow: 0 0 0 3px color-mix(in hsl, var(--error), transparent 80%);
+  }
+  
+  /* Button System */
+  .button {
+    --button-color: var(--primary);
+    --button-bg: var(--surface);
+    --button-padding: var(--space-sm) var(--space-md);
+    --button-radius: var(--radius-md);
+    
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    min-height: 44px; /* WCAG touch target */
+    padding: var(--button-padding);
+    border: 2px solid var(--button-color);
+    background: var(--button-bg);
+    color: var(--button-color);
+    border-radius: var(--button-radius);
+    cursor: pointer;
+    font-weight: var(--font-medium);
+    text-decoration: none;
+    
+    transition: all var(--transition-base);
+  }
+  
+  .button:hover:not(:disabled) {
+    background: var(--button-color);
+    color: var(--surface);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+  }
+  
+  .button:active {
+    transform: translateY(0);
+  }
+  
+  .button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+  
+  /* Button Variants */
+  .button--primary {
+    --button-bg: var(--primary);
+    color: var(--surface);
+  }
+  
+  .button--primary:hover:not(:disabled) {
+    --button-bg: var(--primary-dark);
+    border-color: var(--primary-dark);
+  }
+  
+  .button--success {
+    --button-color: var(--success);
+  }
+  
+  .button--warning {
+    --button-color: var(--warning);
+  }
+  
+  .button--error {
+    --button-color: var(--error);
+  }
+  
+  .button--sm {
+    --button-padding: var(--space-xs) var(--space-sm);
+    min-height: 36px;
+    font-size: var(--text-sm);
+  }
+  
+  .button--lg {
+    --button-padding: var(--space-md) var(--space-lg);
+    min-height: 52px;
+    font-size: var(--text-lg);
+  }
+  
+  .button--ghost {
+    --button-bg: transparent;
+    border-color: transparent;
+  }
+  
+  .button--ghost:hover:not(:disabled) {
+    background: color-mix(in hsl, var(--button-color), transparent 90%);
+    border-color: color-mix(in hsl, var(--button-color), transparent 70%);
+    color: var(--button-color);
+  }
+  
+  /* Participant Components */
+  .participant-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    background: var(--surface-elevated);
+    border: 1px solid color-mix(in hsl, var(--primary), transparent 85%);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+    transition: all var(--transition-base);
+  }
+  
+  .participant-badge.online {
+    border-color: var(--success);
+    background: var(--success-light);
+  }
+  
+  .participant-badge.offline {
+    opacity: 0.6;
+  }
+  
+  .participant-badge.typing {
+    border-color: var(--info);
+    background: var(--info-light);
+    animation: pulse 2s infinite;
+  }
+  
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+  
+  /* Notification Components */
+  .notification {
+    --notification-padding: var(--space-md);
+    --notification-radius: var(--radius-md);
+    
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    padding: var(--notification-padding);
+    border-radius: var(--notification-radius);
+    background: var(--surface-elevated);
+    border: 1px solid color-mix(in hsl, var(--primary), transparent 85%);
+    box-shadow: var(--shadow-lg);
+    
+    max-width: 400px;
+    min-width: 300px;
+  }
+  
+  .notification--success {
+    border-color: var(--success);
+    background: var(--success-light);
+  }
+  
+  .notification--warning {
+    border-color: var(--warning);
+    background: var(--warning-light);
+  }
+  
+  .notification--error {
+    border-color: var(--error);
+    background: var(--error-light);
+  }
+  
+  .notification--info {
+    border-color: var(--info);
+    background: var(--info-light);
+  }
+  
+  .notification-close {
+    margin-left: auto;
+    padding: var(--space-xs);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-lg);
+    font-weight: var(--font-bold);
+    opacity: 0.6;
+    transition: opacity var(--transition-base);
+  }
+  
+  .notification-close:hover {
+    opacity: 1;
+    background: color-mix(in hsl, currentColor, transparent 90%);
+  }
+}
+
+/* =====================================================
+   Utilities Layer - Helper Classes
+   ===================================================== */
+
+@layer utilities {
+  /* Modern Focus Management */
+  :is(a, button, input, textarea, select, [tabindex]):focus-visible {
+    outline: max(2px, 0.15em) solid currentColor;
+    outline-offset: max(2px, 0.15em);
+  }
+  
+  /* Typography Utilities */
+  .text-xs { font-size: var(--text-xs); }
+  .text-sm { font-size: var(--text-sm); }
+  .text-base { font-size: var(--text-base); }
+  .text-lg { font-size: var(--text-lg); }
+  .text-xl { font-size: var(--text-xl); }
+  .text-2xl { font-size: var(--text-2xl); }
+  .text-3xl { font-size: var(--text-3xl); }
+  
+  .font-light { font-weight: var(--font-light); }
+  .font-normal { font-weight: var(--font-normal); }
+  .font-medium { font-weight: var(--font-medium); }
+  .font-semibold { font-weight: var(--font-semibold); }
+  .font-bold { font-weight: var(--font-bold); }
+  
+  .text-balance {
+    text-wrap: balance;
+    max-inline-size: 65ch;
+  }
+  
+  .text-pretty {
+    text-wrap: pretty;
+    max-inline-size: 75ch;
+  }
+  
+  .text-center { text-align: center; }
+  .text-left { text-align: left; }
+  .text-right { text-align: right; }
+  
+  /* Color Utilities */
+  .text-muted { color: var(--text-muted); }
+  .text-subtle { color: var(--text-subtle); }
+  .text-success { color: var(--success); }
+  .text-warning { color: var(--warning); }
+  .text-error { color: var(--error); }
+  .text-info { color: var(--info); }
+  
+  /* Spacing Utilities */
+  .p-xs { padding: var(--space-xs); }
+  .p-sm { padding: var(--space-sm); }
+  .p-md { padding: var(--space-md); }
+  .p-lg { padding: var(--space-lg); }
+  .p-xl { padding: var(--space-xl); }
+  
+  .m-xs { margin: var(--space-xs); }
+  .m-sm { margin: var(--space-sm); }
+  .m-md { margin: var(--space-md); }
+  .m-lg { margin: var(--space-lg); }
+  .m-xl { margin: var(--space-xl); }
+  
+  .mt-xs { margin-top: var(--space-xs); }
+  .mt-sm { margin-top: var(--space-sm); }
+  .mt-md { margin-top: var(--space-md); }
+  .mt-lg { margin-top: var(--space-lg); }
+  .mt-xl { margin-top: var(--space-xl); }
+  
+  /* Container Query Utilities */
+  .container-aware {
+    container: component / inline-size;
+  }
+  
+  /* Display Utilities */
+  .hidden { display: none; }
+  .block { display: block; }
+  .inline { display: inline; }
+  .inline-block { display: inline-block; }
+  
+  /* Accessibility Utilities */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  
+  /* Motion Preferences */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+  
+  /* High Contrast Mode Support */
+  @media (prefers-contrast: high) {
+    :root {
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+      --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.3);
+      --shadow-lg: 0 8px 25px rgba(0, 0, 0, 0.3);
+    }
+  }
+}
+
+/* =====================================================
+   States Layer - Interactive States
+   ===================================================== */
+
+@layer states {
+  /* Loading States */
+  .loading {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .loading::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in hsl, var(--primary), transparent 80%),
+      transparent
+    );
+    animation: loading 1.5s infinite;
+  }
+  
+  @keyframes loading {
+    100% {
+      left: 100%;
+    }
+  }
+  
+  /* Save Status Indicators */
+  .status--saved::before {
+    content: '✓';
+    color: var(--success);
+    margin-right: var(--space-xs);
+  }
+  
+  .status--saving::before {
+    content: '⋯';
+    color: var(--warning);
+    margin-right: var(--space-xs);
+    animation: pulse 1s infinite;
+  }
+  
+  .status--error::before {
+    content: '⚠';
+    color: var(--error);
+    margin-right: var(--space-xs);
+  }
+  
+  /* Connection Status */
+  .connected {
+    color: var(--success);
+  }
+  
+  .disconnected {
+    color: var(--error);
+  }
+  
+  .reconnecting {
+    color: var(--warning);
+    animation: pulse 1s infinite;
+  }
+  
+  /* Activity States */
+  .turn-indicator.current {
+    background: var(--accent-strong);
+    font-weight: var(--font-semibold);
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .typing-indicator {
+    font-size: var(--text-xs);
+    color: var(--info);
+    font-style: italic;
+  }
+}

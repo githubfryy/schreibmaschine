@@ -1,0 +1,149 @@
+{{/* 
+  Notification Component - Toast notification system
+  Based on Alpine.js patterns and design system
+*/}}
+
+{{ function notificationContainer(options = {}) }}
+  {{ set position = options.position || 'bottom-right' }}
+  {{ set className = options.className || '' }}
+  
+  <div class="notification-container notification-container--{{ position }} {{ className }}"
+       x-data="notificationSystem()"
+       x-cloak
+       role="region"
+       aria-label="Benachrichtigungen"
+       aria-live="polite">
+    
+    <template x-for="notification in notifications" :key="notification.id">
+      <div class="notification"
+           :class="`notification--${notification.type}`"
+           x-show="notification.show"
+           x-transition:enter="transition-enter"
+           x-transition:enter-start="transform translate-x-full opacity-0"
+           x-transition:enter-end="transform translate-x-0 opacity-100"
+           x-transition:leave="transition-leave"
+           x-transition:leave-start="transform translate-x-0 opacity-100"
+           x-transition:leave-end="transform translate-x-full opacity-0"
+           role="alert">
+        
+        <div class="notification-content">
+          {{/* Icon based on notification type */}}
+          <div class="notification-icon" x-show="notification.type">
+            <span x-show="notification.type === 'success'" class="icon-success" aria-hidden="true">✓</span>
+            <span x-show="notification.type === 'warning'" class="icon-warning" aria-hidden="true">⚠</span>
+            <span x-show="notification.type === 'error'" class="icon-error" aria-hidden="true">⚠</span>
+            <span x-show="notification.type === 'info'" class="icon-info" aria-hidden="true">ℹ</span>
+          </div>
+          
+          <div class="notification-body">
+            <div class="notification-title" x-show="notification.title" x-text="notification.title"></div>
+            <div class="notification-message" x-text="notification.message"></div>
+          </div>
+          
+          <button class="notification-close" 
+                  @click="remove(notification.id)"
+                  type="button"
+                  aria-label="Benachrichtigung schließen">
+            <span aria-hidden="true">×</span>
+          </button>
+        </div>
+      </div>
+    </template>
+  </div>
+{{ /function }}
+
+{{ function notificationTrigger(message, type = 'info', options = {}) }}
+  {{ set buttonText = options.buttonText || 'Benachrichtigung senden' }}
+  {{ set title = options.title || null }}
+  {{ set duration = options.duration || 5000 }}
+  
+  <button type="button" 
+          class="button"
+          @click="$dispatch('notify', { 
+            message: '{{ message }}', 
+            type: '{{ type }}'{{ if title }}, 
+            title: '{{ title }}'{{ /if }}{{ if duration !== 5000 }}, 
+            duration: {{ duration }}{{ /if }}
+          })">
+    {{ buttonText }}
+  </button>
+{{ /function }}
+
+{{/* Workshop-specific notification helpers */}}
+{{ function activityNotification(activity, participant) }}
+  {{ set message = '' }}
+  {{ set type = 'info' }}
+  
+  {{ if activity.status === 'active' }}
+    {{ set message = `Activity "${activity.title}" wurde gestartet` }}
+    {{ set type = 'success' }}
+  {{ else if activity.status === 'paused' }}
+    {{ set message = `Activity "${activity.title}" wurde pausiert` }}
+    {{ set type = 'warning' }}
+  {{ else if activity.status === 'completed' }}
+    {{ set message = `Activity "${activity.title}" wurde abgeschlossen` }}
+    {{ set type = 'info' }}
+  {{ /if }}
+  
+  {{ if message }}
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        window.dispatchEvent(new CustomEvent('notify', {
+          detail: {
+            message: '{{ message }}',
+            type: '{{ type }}',
+            duration: 4000
+          }
+        }));
+      });
+    </script>
+  {{ /if }}
+{{ /function }}
+
+{{ function participantJoinedNotification(participant) }}
+  <script>
+    document.addEventListener('alpine:init', () => {
+      window.dispatchEvent(new CustomEvent('notify', {
+        detail: {
+          message: '{{ participant.display_name }} ist der Gruppe beigetreten',
+          type: 'success',
+          duration: 3000
+        }
+      }));
+    });
+  </script>
+{{ /function }}
+
+{{ function connectionStatusNotification() }}
+  <div x-data="{ 
+    isOnline: navigator.onLine,
+    init() {
+      window.addEventListener('online', () => {
+        this.isOnline = true;
+        this.$dispatch('notify', {
+          message: 'Verbindung wiederhergestellt',
+          type: 'success',
+          duration: 3000
+        });
+      });
+      
+      window.addEventListener('offline', () => {
+        this.isOnline = false;
+        this.$dispatch('notify', {
+          message: 'Verbindung unterbrochen. Änderungen werden lokal gespeichert.',
+          type: 'warning',
+          duration: 0 // Don't auto-dismiss
+        });
+      });
+    }
+  }"></div>
+{{ /function }}
+
+{{/* Export functions */}}
+{{ export { 
+  notificationContainer, 
+  notificationTrigger,
+  activityNotification,
+  participantJoinedNotification,
+  connectionStatusNotification
+} }}
