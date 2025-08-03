@@ -1,0 +1,192 @@
+<!-- Rhyming Chain Game Component -->
+<div class="rhyming-chain">
+  <div class="game-header">
+    <h4>{{ activity.title }} - Reimkette</h4>
+    {{ if activity.description }}
+    <p class="game-description">{{ activity.description }}</p>
+    {{ /if }}
+  </div>
+  
+  <div class="game-status">
+    <div class="status-grid">
+      <div class="status-item">
+        <span class="status-label">Runde</span>
+        <span class="status-value" x-text="activityData.currentRound || 1"></span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Papiere im Umlauf</span>
+        <span class="status-value" x-text="activityData.activePapers || 0"></span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Dein Status</span>
+        <span class="status-value turn-status" 
+              :class="{ 'your-turn': isYourTurn, 'waiting': !isYourTurn }"
+              x-text="isYourTurn ? 'Du bist dran' : 'Warten'"></span>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Current Turn Interface -->
+  <div x-show="isYourTurn" class="turn-interface">
+    <div class="paper-stack">
+      <h5>Dein aktuelles Papier</h5>
+      
+      <!-- Previous Line Display -->
+      <div x-show="activityData.previousLine" class="previous-line">
+        <div class="line-header">
+          <span class="line-label">Vorherige Zeile:</span>
+          <span class="line-author" x-text="activityData.previousAuthor"></span>
+        </div>
+        <div class="line-content" x-text="activityData.previousLine"></div>
+      </div>
+      
+      <!-- First Line Prompt -->
+      <div x-show="!activityData.previousLine" class="first-line-prompt">
+        <div class="prompt-icon">✨</div>
+        <p><strong>Starte ein neues Gedicht!</strong></p>
+        <p>Schreibe die erste Zeile. Die anderen werden darauf aufbauen.</p>
+      </div>
+    </div>
+    
+    <!-- Input Area -->
+    <div class="input-area">
+      <label for="current-line">Deine Zeile:</label>
+      <textarea 
+        id="current-line"
+        x-model="activityData.currentLine"
+        @keydown.enter.meta="submitLine()"
+        @keydown.enter.ctrl="submitLine()"
+        :placeholder="activityData.previousLine ? 'Schreibe eine Zeile, die sich reimt...' : 'Schreibe die erste Zeile des Gedichts...'"
+        class="rhyme-input"></textarea>
+      
+      <div class="input-help">
+        <div class="help-text">
+          {{ if activity.rhyme_scheme }}
+          <span class="rhyme-scheme">Reimschema: {{ activity.rhyme_scheme }}</span>
+          {{ /if }}
+          <span class="shortcut">⌘+Enter oder Strg+Enter zum Abschicken</span>
+        </div>
+        
+        <div class="character-count" x-text="(activityData.currentLine || '').length + '/200'"></div>
+      </div>
+    </div>
+    
+    <!-- Action Buttons -->
+    <div class="turn-actions">
+      <button @click="submitLine()" 
+              :disabled="!activityData.currentLine?.trim()"
+              class="btn btn-primary">
+        <span x-show="!activityData.previousLine">Gedicht starten</span>
+        <span x-show="activityData.previousLine">Zeile abschicken</span>
+      </button>
+      
+      <button @click="skipTurn()" class="btn btn-secondary">
+        Überspringen
+      </button>
+      
+      {{ if isTeamer }}
+      <button @click="showHint()" class="btn btn-secondary">
+        Hilfe anzeigen
+      </button>
+      {{ /if }}
+    </div>
+  </div>
+  
+  <!-- Waiting Interface -->
+  <div x-show="!isYourTurn" class="waiting-interface">
+    <div class="waiting-status">
+      <div class="waiting-icon">⏳</div>
+      <h5>Warte auf andere Teilnehmer...</h5>
+      <p x-show="activityData.currentTurnParticipant">
+        <strong x-text="activityData.currentTurnParticipant"></strong> ist gerade dran
+      </p>
+      <p x-show="!activityData.currentTurnParticipant">
+        Die Runde wird vorbereitet...
+      </p>
+    </div>
+    
+    <!-- Queue Status -->
+    <div x-show="activityData.turnQueue" class="turn-queue">
+      <h6>Reihenfolge:</h6>
+      <div class="queue-list">
+        <div class="queue-item"
+             x-for="(participant, index) in activityData.turnQueue"
+             :class="{ 
+               'queue-current': participant.id === activityData.currentTurn,
+               'queue-completed': participant.completed,
+               'queue-you': participant.id === currentParticipantId
+             }">
+          <span class="queue-number" x-text="index + 1"></span>
+          <span class="queue-name" x-text="participant.name"></span>
+          <span x-show="participant.id === currentParticipantId" class="queue-you-label">(Du)</span>
+          <span x-show="participant.completed" class="queue-status">✓</span>
+          <span x-show="participant.id === activityData.currentTurn" class="queue-status">📝</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Completed Poems Display -->
+  <div x-show="activityData.completedPoems?.length > 0" class="completed-poems">
+    <div class="poems-header">
+      <h5>Fertige Gedichte</h5>
+      <button @click="togglePoemsView()" class="btn btn-sm btn-secondary">
+        {{ showCompletedPoems ? 'Ausblenden' : 'Anzeigen' }}
+      </button>
+    </div>
+    
+    <div x-show="showCompletedPoems" class="poems-list">
+      <div class="poem-card"
+           x-for="poem in activityData.completedPoems">
+        <div class="poem-header">
+          <span class="poem-title" x-text="poem.title || 'Gedicht #' + poem.id"></span>
+          <span class="poem-authors" x-text="poem.authors.join(', ')"></span>
+        </div>
+        <div class="poem-content">
+          <div class="poem-line"
+               x-for="line in poem.lines">
+            <span class="line-text" x-text="line.content"></span>
+            <span class="line-author" x-text="line.author"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  {{ if isTeamer }}
+  <!-- Teamer Controls -->
+  <div class="teamer-controls">
+    <div class="control-section">
+      <h6>Spiel-Einstellungen</h6>
+      <div class="control-grid">
+        <label class="control-option">
+          <input type="number" x-model="activityData.maxLines" min="4" max="20">
+          <span>Max. Zeilen pro Gedicht</span>
+        </label>
+        
+        <label class="control-option">
+          <input type="checkbox" x-model="activityData.shufflePapers" @change="updateGameSettings()">
+          <span>Papiere mischen</span>
+        </label>
+        
+        <label class="control-option">
+          <input type="checkbox" x-model="activityData.showProgress" @change="updateGameSettings()">
+          <span>Fortschritt anzeigen</span>
+        </label>
+      </div>
+    </div>
+    
+    <div class="action-section">
+      <button @click="forceNextTurn()" class="btn btn-secondary">
+        Nächster Zug erzwingen
+      </button>
+      <button @click="resetCurrentRound()" class="btn btn-secondary">
+        Runde zurücksetzen
+      </button>
+      <button @click="completeActivity()" class="btn btn-primary">
+        Spiel beenden
+      </button>
+    </div>
+  </div>
+  {{ /if }}
+</div>

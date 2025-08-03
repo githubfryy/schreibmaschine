@@ -1,0 +1,449 @@
+{{ layout "layouts/base.vto" }}
+
+<!-- Group Room Header -->
+<section class="room-header">
+  <div class="room-content">
+    <div class="room-info">
+      <span class="workshop-badge">{{ workshop.name }}</span>
+      <h1 class="room-title">{{ writing_group.name }}</h1>
+      {{ if writing_group.description }}
+      <p class="room-description">{{ writing_group.description }}</p>
+      {{ /if }}
+    </div>
+    <div class="room-status">
+      <div class="online-indicator">
+        <span class="online-count">{{ online_count }}</span>
+        <span class="online-label">Online</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Alpine.js Group Room App -->
+<div class="room-container" x-data="groupRoomApp()" x-init="initializeRoom()">
+  
+  <!-- Loading State -->
+  <div x-show="loading" class="room-loading">
+    <div class="loading-spinner"></div>
+    <p>Lade Schreibraum...</p>
+  </div>
+
+  <!-- Main Room Interface -->
+  <div x-show="!loading" class="room-main">
+    
+    <!-- Participants Sidebar -->
+    <aside class="participants-panel">
+      <div class="panel-header">
+        <h3>Teilnehmer</h3>
+        <span class="participant-count" x-text="participants.length + ' Personen'"></span>
+      </div>
+      
+      <div class="participants-list">
+        {{ for participant of participants }}
+        <div class="participant-item" 
+             :class="{ 
+               'participant-current': '{{ participant.is_current_user ? 'true' : 'false' }}' === 'true',
+               'participant-online': isParticipantOnline('{{ participant.id }}')
+             }">
+          <div class="participant-avatar">
+            {{ participant.display_name.charAt(0).toUpperCase() }}
+          </div>
+          <div class="participant-details">
+            <span class="participant-name">
+              {{ participant.display_name }}
+              {{ if participant.is_current_user }}(Du){{ /if }}
+            </span>
+            <span class="participant-role">{{ participant.role | capitalize }}</span>
+          </div>
+          <div class="participant-status">
+            <span x-show="isParticipantOnline('{{ participant.id }}')" class="status-online">●</span>
+            <span x-show="!isParticipantOnline('{{ participant.id }}')" class="status-offline">○</span>
+          </div>
+        </div>
+        {{ /for }}
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="room-workspace">
+      
+      <!-- Activities Section -->
+      <section class="activities-section">
+        <div class="section-header">
+          <h2>Aktivitäten</h2>
+          {{ if current_participant_role === 'teamer' }}
+          <button @click="showCreateActivity = true" class="btn btn-primary">
+            Aktivität erstellen
+          </button>
+          {{ /if }}
+        </div>
+
+        <!-- No Activities State -->
+        {{ if activities.length === 0 }}
+        <div class="empty-state">
+          <div class="empty-icon">📝</div>
+          <h3>Noch keine Aktivitäten</h3>
+          <p>{{ if current_participant_role === 'teamer' }}
+            Erstelle die erste Schreibübung für deine Gruppe.
+          {{ else }}
+            Warte darauf, dass der Teamer eine Aktivität startet.
+          {{ /if }}</p>
+        </div>
+        {{ else }}
+        
+        <!-- Activities Grid -->
+        <div class="activities-grid">
+          {{ for activity of activities }}
+          <div class="activity-card" 
+               :class="{ 'activity-active': '{{ activity.status }}' === 'active' }"
+               @click="openActivity('{{ activity.id }}')">
+            <div class="activity-header">
+              <h3 class="activity-title">{{ activity.title }}</h3>
+              <span class="activity-status status-{{ activity.status }}">
+                {{ activity.status | activityStatus }}
+              </span>
+            </div>
+            {{ if activity.description }}
+            <p class="activity-description">{{ activity.description }}</p>
+            {{ /if }}
+            <div class="activity-meta">
+              <span class="activity-type">{{ activity.type | capitalize }}</span>
+              <span class="activity-participants">{{ activity.participant_count | participantCount }}</span>
+              {{ if activity.last_turn_at }}
+              <span class="activity-updated">{{ activity.last_turn_at | formatDate }}</span>
+              {{ /if }}
+            </div>
+            {{ if current_participant_role === 'teamer' }}
+            <div class="activity-controls">
+              <button @click.stop="toggleActivity('{{ activity.id }}')" 
+                      class="btn btn-sm"
+                      :class="{
+                        'btn-secondary': '{{ activity.status }}' === 'active',
+                        'btn-primary': '{{ activity.status }}' !== 'active'
+                      }">
+                {{ if activity.status === 'active' }}Pausieren{{ else }}Starten{{ /if }}
+              </button>
+            </div>
+            {{ /if }}
+          </div>
+          {{ /for }}
+        </div>
+        {{ /if }}
+      </section>
+
+      <!-- Active Activity Interface -->
+      <div x-show="activeActivity" class="activity-interface">
+        <div class="activity-interface-header">
+          <div>
+            <h3 x-text="activeActivity?.title"></h3>
+            <p x-text="activeActivity?.description"></p>
+          </div>
+          <button @click="closeActivity()" class="btn btn-secondary">Schließen</button>
+        </div>
+        
+        <!-- Dynamic Activity Content -->
+        <div class="activity-content">
+          <!-- Individual Writing Pad -->
+          <div x-show="activeActivity?.type === 'individual_pad'" class="individual-pad">
+            <div class="writing-area">
+              <textarea 
+                x-model="activityData.content"
+                @input="autoSave()"
+                placeholder="Beginne hier zu schreiben..."
+                class="writing-textarea"></textarea>
+              <div class="writing-meta">
+                <span class="word-count" x-text="getWordCount(activityData.content)">0 Wörter</span>
+                <span class="save-status" x-text="saveStatus"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Collaborative Pad -->
+          <div x-show="activeActivity?.type === 'collaborative_pad'" class="collaborative-pad">
+            <div class="collaboration-notice">
+              <p>Geteiltes Dokument - Änderungen werden automatisch synchronisiert</p>
+            </div>
+            <div class="writing-area">
+              <textarea 
+                x-model="activityData.sharedContent"
+                @input="syncChanges()"
+                placeholder="Schreibt gemeinsam hier..."
+                class="writing-textarea collaborative"></textarea>
+            </div>
+          </div>
+
+          <!-- Rhyming Chain Game -->
+          <div x-show="activeActivity?.type === 'rhyming_chain'" class="rhyming-chain">
+            <div class="game-status">
+              <p>Runde <span x-text="activityData.currentRound"></span> - 
+                 Du bist <span x-text="activityData.currentTurn === currentParticipantId ? 'dran' : 'nicht dran'"></span></p>
+            </div>
+            
+            <div x-show="activityData.previousLine" class="previous-line">
+              <h4>Vorherige Zeile:</h4>
+              <p x-text="activityData.previousLine"></p>
+            </div>
+            
+            <div x-show="activityData.currentTurn === currentParticipantId" class="writing-turn">
+              <textarea 
+                x-model="activityData.currentLine"
+                placeholder="Schreibe deine Zeile, die sich reimt..."
+                class="rhyme-input"></textarea>
+              <div class="turn-actions">
+                <button @click="submitLine()" class="btn btn-primary">Zeile abschicken</button>
+                <button @click="skipTurn()" class="btn btn-secondary">Überspringen</button>
+              </div>
+            </div>
+            
+            <div x-show="activityData.currentTurn !== currentParticipantId" class="waiting-turn">
+              <p>Warte auf <span x-text="getCurrentTurnParticipantName()"></span>...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Create Activity Modal -->
+  <div x-show="showCreateActivity" class="modal-overlay" @click="showCreateActivity = false">
+    <div class="modal-content" @click.stop>
+      <div class="modal-header">
+        <h3>Neue Aktivität erstellen</h3>
+        <button @click="showCreateActivity = false" class="modal-close">×</button>
+      </div>
+      <form @submit.prevent="createActivity()" class="activity-form">
+        <div class="form-group">
+          <label for="activity-title">Titel</label>
+          <input type="text" id="activity-title" x-model="newActivity.title" required>
+        </div>
+        <div class="form-group">
+          <label for="activity-description">Beschreibung</label>
+          <textarea id="activity-description" x-model="newActivity.description"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="activity-type">Typ</label>
+          <select id="activity-type" x-model="newActivity.type" required>
+            <option value="individual_pad">Einzelnes Schreibfeld</option>
+            <option value="collaborative_pad">Gemeinsames Schreibfeld</option>
+            <option value="rhyming_chain">Reimkette</option>
+          </select>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Erstellen</button>
+          <button type="button" @click="showCreateActivity = false" class="btn btn-secondary">Abbrechen</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Alpine.js Group Room Logic -->
+<script>
+function groupRoomApp() {
+  return {
+    loading: true,
+    participants: {{ participants | json }},
+    activities: {{ activities | json }},
+    currentParticipantId: '{{ current_participant_id }}',
+    currentParticipantRole: '{{ current_participant_role || "participant" }}',
+    onlineParticipants: [],
+    activeActivity: null,
+    activityData: {},
+    showCreateActivity: false,
+    newActivity: { title: '', description: '', type: 'individual_pad' },
+    saveStatus: 'Gespeichert',
+    autoSaveTimeout: null,
+
+    async initializeRoom() {
+      try {
+        await this.loadOnlineStatus();
+        this.startSSE();
+        this.loading = false;
+      } catch (error) {
+        console.error('Failed to initialize room:', error);
+        this.loading = false;
+      }
+    },
+
+    async loadOnlineStatus() {
+      try {
+        const response = await fetch('/api/groups/{{ workshop_group.id }}/online');
+        if (response.ok) {
+          const data = await response.json();
+          this.onlineParticipants = data.participants || [];
+        }
+      } catch (error) {
+        console.error('Failed to load online status:', error);
+      }
+    },
+
+    isParticipantOnline(participantId) {
+      return this.onlineParticipants.includes(participantId);
+    },
+
+    async openActivity(activityId) {
+      try {
+        // Load activity details and state
+        const [activityResponse, stateResponse] = await Promise.all([
+          fetch(`/api/activities/${activityId}`),
+          fetch(`/api/activities/${activityId}/state`)
+        ]);
+
+        if (activityResponse.ok && stateResponse.ok) {
+          const activity = await activityResponse.json();
+          const state = await stateResponse.json();
+          
+          this.activeActivity = activity.activity;
+          this.activityData = state.state || {};
+        }
+      } catch (error) {
+        console.error('Failed to open activity:', error);
+      }
+    },
+
+    closeActivity() {
+      this.activeActivity = null;
+      this.activityData = {};
+    },
+
+    async toggleActivity(activityId) {
+      try {
+        const activity = this.activities.find(a => a.id === activityId);
+        const newStatus = activity.status === 'active' ? 'paused' : 'active';
+        
+        const response = await fetch(`/api/activities/${activityId}/status`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newStatus })
+        });
+
+        if (response.ok) {
+          activity.status = newStatus;
+        }
+      } catch (error) {
+        console.error('Failed to toggle activity:', error);
+      }
+    },
+
+    async createActivity() {
+      try {
+        const response = await fetch('/api/activities', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...this.newActivity,
+            workshop_group_id: '{{ workshop_group.id }}'
+          })
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          this.activities.unshift(result.activity);
+          this.showCreateActivity = false;
+          this.newActivity = { title: '', description: '', type: 'individual_pad' };
+        }
+      } catch (error) {
+        console.error('Failed to create activity:', error);
+      }
+    },
+
+    autoSave() {
+      this.saveStatus = 'Speichere...';
+      clearTimeout(this.autoSaveTimeout);
+      
+      this.autoSaveTimeout = setTimeout(async () => {
+        try {
+          await this.saveActivityState();
+          this.saveStatus = 'Gespeichert';
+        } catch (error) {
+          this.saveStatus = 'Fehler beim Speichern';
+        }
+      }, 1000);
+    },
+
+    async saveActivityState() {
+      if (!this.activeActivity) return;
+      
+      const response = await fetch(`/api/activities/${this.activeActivity.id}/state`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(this.activityData)
+      });
+
+      if (!response.ok) {
+        throw new Error('Save failed');
+      }
+    },
+
+    getWordCount(text) {
+      if (!text) return 0;
+      return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+    },
+
+    getCurrentTurnParticipantName() {
+      const participant = this.participants.find(p => p.id === this.activityData.currentTurn);
+      return participant ? participant.display_name : 'Unbekannt';
+    },
+
+    async submitLine() {
+      if (!this.activityData.currentLine?.trim()) return;
+      
+      try {
+        const response = await fetch(`/api/activities/${this.activeActivity.id}/turn`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: this.activityData.currentLine.trim()
+          })
+        });
+
+        if (response.ok) {
+          this.activityData.currentLine = '';
+          // Activity state will be updated via SSE
+        }
+      } catch (error) {
+        console.error('Failed to submit line:', error);
+      }
+    },
+
+    async skipTurn() {
+      try {
+        const response = await fetch(`/api/activities/${this.activeActivity.id}/skip`, {
+          method: 'POST'
+        });
+
+        if (response.ok) {
+          // Activity state will be updated via SSE
+        }
+      } catch (error) {
+        console.error('Failed to skip turn:', error);
+      }
+    },
+
+    startSSE() {
+      const eventSource = new EventSource('/sse?group={{ workshop_group.id }}');
+      
+      eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        
+        if (data.type === 'online_status') {
+          this.onlineParticipants = data.participants || [];
+        } else if (data.type === 'activity_update') {
+          // Update activity state in real-time
+          if (this.activeActivity && this.activeActivity.id === data.activity_id) {
+            this.activityData = { ...this.activityData, ...data.state };
+          }
+        } else if (data.type === 'activity_created') {
+          this.activities.unshift(data.activity);
+        }
+      };
+
+      eventSource.onerror = () => {
+        console.warn('SSE connection lost, will retry...');
+      };
+    }
+  }
+}
+</script>
+
+{{ /layout }}

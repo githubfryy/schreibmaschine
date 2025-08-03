@@ -1,0 +1,199 @@
+<!-- Participant List Component -->
+<div class="participant-list-component">
+  <div class="list-header">
+    <h4>{{ title || "Teilnehmer" }}</h4>
+    <span class="participant-count" x-text="participants.length + ' Personen'"></span>
+  </div>
+  
+  <div class="participants-container" :class="{ 'compact': compact, 'horizontal': horizontal }">
+    <div class="participant-item"
+         x-for="participant in participants"
+         :class="{ 
+           'participant-current': participant.id === currentParticipantId,
+           'participant-online': isParticipantOnline(participant.id),
+           'participant-teamer': participant.role === 'teamer'
+         }">
+      
+      <!-- Participant Avatar -->
+      <div class="participant-avatar" 
+           :style="{ backgroundColor: getParticipantColor(participant.id) }">
+        <span x-text="participant.display_name.charAt(0).toUpperCase()"></span>
+      </div>
+      
+      <!-- Participant Info -->
+      <div class="participant-info">
+        <div class="participant-name">
+          <span x-text="participant.display_name"></span>
+          <span x-show="participant.id === currentParticipantId" class="you-label">(Du)</span>
+        </div>
+        
+        <div class="participant-meta">
+          <span class="participant-role" x-text="participant.role | capitalize"></span>
+          {{ if showActivity }}
+          <span x-show="participant.currentActivity" 
+                class="current-activity" 
+                x-text="participant.currentActivity"></span>
+          {{ /if }}
+        </div>
+      </div>
+      
+      <!-- Status Indicators -->
+      <div class="participant-status">
+        <!-- Online Status -->
+        <div class="status-indicator online-status" 
+             :class="{ 'status-online': isParticipantOnline(participant.id) }"
+             :title="isParticipantOnline(participant.id) ? 'Online' : 'Offline'">
+          <span x-show="isParticipantOnline(participant.id)">●</span>
+          <span x-show="!isParticipantOnline(participant.id)">○</span>
+        </div>
+        
+        <!-- Activity Status -->
+        {{ if showActivityStatus }}
+        <div class="status-indicator activity-status"
+             x-show="participant.activityStatus"
+             :class="'status-' + participant.activityStatus"
+             :title="getActivityStatusText(participant.activityStatus)">
+          <span x-show="participant.activityStatus === 'writing'">✏️</span>
+          <span x-show="participant.activityStatus === 'waiting'">⏳</span>
+          <span x-show="participant.activityStatus === 'completed'">✅</span>
+        </div>
+        {{ /if }}
+        
+        <!-- Typing Indicator -->
+        {{ if showTyping }}
+        <div class="typing-indicator" 
+             x-show="participant.isTyping"
+             title="Schreibt gerade...">
+          <div class="typing-dots">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
+        {{ /if }}
+      </div>
+      
+      <!-- Admin Actions -->
+      {{ if isTeamer && showAdminActions }}
+      <div class="participant-actions">
+        <button @click="sendMessage(participant.id)" 
+                class="action-btn" 
+                title="Nachricht senden">
+          💬
+        </button>
+        
+        <button @click="viewParticipantWork(participant.id)" 
+                class="action-btn" 
+                title="Arbeit anzeigen">
+          👁️
+        </button>
+        
+        <div class="action-dropdown">
+          <button @click="toggleDropdown(participant.id)" class="action-btn">⚙️</button>
+          <div class="dropdown-menu" x-show="openDropdown === participant.id">
+            <button @click="promoteToTeamer(participant.id)">Zu Teamer machen</button>
+            <button @click="resetParticipantProgress(participant.id)">Fortschritt zurücksetzen</button>
+            <button @click="removeFromGroup(participant.id)" class="danger">Aus Gruppe entfernen</button>
+          </div>
+        </div>
+      </div>
+      {{ /if }}
+    </div>
+  </div>
+  
+  <!-- Empty State -->
+  <div x-show="participants.length === 0" class="empty-participants">
+    <div class="empty-icon">👥</div>
+    <p>Noch keine Teilnehmer in der Gruppe</p>
+  </div>
+  
+  <!-- Quick Stats -->
+  {{ if showStats }}
+  <div class="participant-stats">
+    <div class="stat-item">
+      <span class="stat-value" x-text="participants.filter(p => isParticipantOnline(p.id)).length"></span>
+      <span class="stat-label">Online</span>
+    </div>
+    
+    <div class="stat-item">
+      <span class="stat-value" x-text="participants.filter(p => p.role === 'teamer').length"></span>
+      <span class="stat-label">Teamer</span>
+    </div>
+    
+    {{ if showActivityStats }}
+    <div class="stat-item">
+      <span class="stat-value" x-text="participants.filter(p => p.activityStatus === 'writing').length"></span>
+      <span class="stat-label">Schreiben</span>
+    </div>
+    
+    <div class="stat-item">
+      <span class="stat-value" x-text="participants.filter(p => p.activityStatus === 'completed').length"></span>
+      <span class="stat-label">Fertig</span>
+    </div>
+    {{ /if }}
+  </div>
+  {{ /if }}
+</div>
+
+<!-- Component-specific styles can be added here or in main CSS -->
+<style>
+.typing-indicator {
+  display: inline-flex;
+  align-items: center;
+}
+
+.typing-dots {
+  display: flex;
+  gap: 2px;
+}
+
+.typing-dots span {
+  width: 3px;
+  height: 3px;
+  background: #3b82f6;
+  border-radius: 50%;
+  animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing {
+  0%, 80%, 100% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.participant-list-component.horizontal .participants-container {
+  display: flex;
+  flex-direction: row;
+  overflow-x: auto;
+  gap: 1rem;
+  padding-bottom: 0.5rem;
+}
+
+.participant-list-component.horizontal .participant-item {
+  flex-shrink: 0;
+  min-width: 200px;
+}
+
+.participant-list-component.compact .participant-item {
+  padding: 0.5rem;
+}
+
+.participant-list-component.compact .participant-avatar {
+  width: 24px;
+  height: 24px;
+  font-size: 0.75rem;
+}
+</style>

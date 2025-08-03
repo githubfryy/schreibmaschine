@@ -1,0 +1,279 @@
+{{ layout "layouts/base.vto" }}
+
+<!-- Lobby Hero Section -->
+<section class="lobby-hero">
+  <div class="lobby-content">
+    <div class="workshop-info">
+      <span class="workshop-name">{{ workshop.name }}</span>
+      <h1 class="group-title">{{ writing_group.name }}</h1>
+      {{ if writing_group.description }}
+      <p class="group-description">{{ writing_group.description }}</p>
+      {{ /if }}
+    </div>
+  </div>
+</section>
+
+<!-- Alpine.js Lobby App -->
+<div class="lobby-container" x-data="lobbyApp()" x-init="initializeLobby()">
+  
+  <!-- Loading State -->
+  <div x-show="loading" class="status-message loading">
+    <div class="status-content">
+      <div class="status-icon">⏳</div>
+      <div class="status-text">
+        <h3>Verbinde...</h3>
+        <p>Lade Gruppendaten und prüfe Verfügbarkeit</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Multi-device Warning -->
+  <div x-show="showMultiDeviceWarning" class="status-message warning">
+    <div class="status-content">
+      <div class="status-icon">📱</div>
+      <div class="status-text">
+        <h3>Bereits online auf anderem Gerät</h3>
+        <p>Du bist bereits in dieser Gruppe angemeldet. Möchtest du hier fortfahren?</p>
+        <div class="status-actions">
+          <button @click="continueOnThisDevice()" class="btn btn-primary">Hier fortfahren</button>
+          <button @click="showMultiDeviceWarning = false" class="btn btn-secondary">Abbrechen</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error State -->
+  <div x-show="error" class="status-message error">
+    <div class="status-content">
+      <div class="status-icon">⚠️</div>
+      <div class="status-text">
+        <h3>Verbindungsfehler</h3>
+        <p x-text="errorMessage"></p>
+        <div class="status-actions">
+          <button @click="retryConnection()" class="btn btn-primary">Erneut versuchen</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Lobby Interface -->
+  <div x-show="!loading && !error" class="lobby-main">
+    
+    <!-- Group Status Info -->
+    <div class="group-status">
+      <div class="status-card">
+        <h3>Gruppenstatus</h3>
+        <div class="status-grid">
+          <div class="status-item">
+            <span class="status-label">Teilnehmer</span>
+            <span class="status-value">{{ participants.length | participantCount }}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Status</span>
+            <span class="status-value" :class="{ 'status-active': {{ is_active ? 'true' : 'false' }} }">
+              {{ if is_active }}Aktiv{{ else }}Vorbereitung{{ /if }}
+            </span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Online</span>
+            <span class="status-value" x-text="onlineCount + ' Personen'"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Participant Selection -->
+    <div class="participant-section">
+      <h2>Wer bist du?</h2>
+      <p class="section-subtitle">Wähle deinen Namen aus der Liste, um der Gruppe beizutreten</p>
+      
+      <div class="participants-grid">
+        {{ for participant of participants }}
+        <button 
+          class="participant-card"
+          :class="{ 'participant-online': isParticipantOnline('{{ participant.id }}') }"
+          @click="selectParticipant('{{ participant.id }}', '{{ participant.display_name }}', '{{ participant.role }}')"
+          :disabled="isParticipantOnline('{{ participant.id }}')"
+        >
+          <div class="participant-info">
+            <span class="participant-name">{{ participant.display_name }}</span>
+            <span class="participant-role">{{ if participant.role === 'teamer' }}Teamer{{ else }}Teilnehmer{{ /if }}</span>
+          </div>
+          <div class="participant-status">
+            <span x-show="isParticipantOnline('{{ participant.id }}')" class="online-indicator">Online</span>
+            <span x-show="!isParticipantOnline('{{ participant.id }}')" class="offline-indicator">Verfügbar</span>
+          </div>
+        </button>
+        {{ /for }}
+      </div>
+    </div>
+
+    <!-- Help Section -->
+    <div class="help-section">
+      <div class="help-card">
+        <h3>Wie funktioniert's?</h3>
+        <div class="help-content">
+          <p><strong>1. Name auswählen:</strong> Klicke auf deinen Namen in der Liste oben</p>
+          <p><strong>2. Automatische Anmeldung:</strong> Du wirst automatisch in die Gruppe weitergeleitet</p>
+          <p><strong>3. Zusammen schreiben:</strong> Arbeitet gemeinsam an kreativen Schreibübungen</p>
+        </div>
+        {{ if urls }}
+        <div class="help-urls">
+          <p><strong>Teilen:</strong> <code class="share-url">{{ urls.short_url }}</code></p>
+        </div>
+        {{ /if }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Alpine.js Lobby Logic -->
+<script>
+function lobbyApp() {
+  return {
+    loading: true,
+    error: false,
+    errorMessage: '',
+    showMultiDeviceWarning: false,
+    onlineParticipants: [],
+    onlineCount: 0,
+
+    async initializeLobby() {
+      try {
+        // Check if already authenticated
+        const existingSession = this.getStoredSession();
+        if (existingSession) {
+          // Check if still valid and redirect
+          const isValid = await this.validateSession(existingSession);
+          if (isValid) {
+            window.location.href = '{{ urls.full_semantic_url }}';
+            return;
+          }
+        }
+
+        // Load online participants
+        await this.loadOnlineStatus();
+        this.loading = false;
+
+        // Start real-time updates
+        this.startSSE();
+      } catch (error) {
+        this.error = true;
+        this.errorMessage = 'Fehler beim Laden der Lobby: ' + error.message;
+        this.loading = false;
+      }
+    },
+
+    async loadOnlineStatus() {
+      try {
+        const response = await fetch('/api/groups/{{ workshop_group.id }}/online');
+        if (response.ok) {
+          const data = await response.json();
+          this.onlineParticipants = data.participants || [];
+          this.onlineCount = data.count || 0;
+        }
+      } catch (error) {
+        console.error('Failed to load online status:', error);
+      }
+    },
+
+    isParticipantOnline(participantId) {
+      return this.onlineParticipants.includes(participantId);
+    },
+
+    async selectParticipant(participantId, displayName, role) {
+      if (this.isParticipantOnline(participantId)) {
+        this.showMultiDeviceWarning = true;
+        this.$persist.multiDeviceParticipant = { participantId, displayName, role };
+        return;
+      }
+
+      await this.authenticateParticipant(participantId, displayName, role);
+    },
+
+    async authenticateParticipant(participantId, displayName, role) {
+      try {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            participant_id: participantId,
+            workshop_group_id: '{{ workshop_group.id }}',
+            display_name: displayName,
+            role: role
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          this.storeSession(data.session);
+          window.location.href = '{{ urls.full_semantic_url }}';
+        } else {
+          throw new Error('Anmeldung fehlgeschlagen');
+        }
+      } catch (error) {
+        this.error = true;
+        this.errorMessage = error.message;
+      }
+    },
+
+    async continueOnThisDevice() {
+      const participant = this.$persist.multiDeviceParticipant;
+      if (participant) {
+        await this.authenticateParticipant(
+          participant.participantId, 
+          participant.displayName, 
+          participant.role
+        );
+      }
+      this.showMultiDeviceWarning = false;
+    },
+
+    async retryConnection() {
+      this.error = false;
+      this.loading = true;
+      await this.initializeLobby();
+    },
+
+    getStoredSession() {
+      const cookie = document.cookie
+        .split(';')
+        .find(c => c.trim().startsWith('schreibmaschine_session='));
+      return cookie ? cookie.split('=')[1] : null;
+    },
+
+    storeSession(sessionToken) {
+      document.cookie = `schreibmaschine_session=${sessionToken}; path=/; max-age=86400`;
+    },
+
+    async validateSession(sessionToken) {
+      try {
+        const response = await fetch('/api/auth/validate', {
+          headers: { 'Authorization': `Bearer ${sessionToken}` }
+        });
+        return response.ok;
+      } catch {
+        return false;
+      }
+    },
+
+    startSSE() {
+      const eventSource = new EventSource('/sse?group={{ workshop_group.id }}');
+      
+      eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === 'online_status') {
+          this.onlineParticipants = data.participants || [];
+          this.onlineCount = data.count || 0;
+        }
+      };
+
+      eventSource.onerror = () => {
+        console.warn('SSE connection lost, will retry...');
+      };
+    }
+  }
+}
+</script>
+
+{{ /layout }}
