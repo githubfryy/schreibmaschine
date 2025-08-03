@@ -1,12 +1,58 @@
+# Environment variables
 .env
-.archived
-.claude
-claude-documentation
-docs
-node_modules
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
+# Archived and temporary files
+.archived/
+.claude/
+claude-documentation/
 perplexity-input.md
-CLAUDE.md
-bun.lock
-ideas
-data
+ideas/
+
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+bun-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# Editor directories and files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
