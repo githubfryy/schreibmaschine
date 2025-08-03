@@ -22,14 +22,15 @@ import { TemplateService } from '@/services/template.service';
  * Built with Bun, Elysia.js, and modern TypeScript.
  */
 const app = new Elysia()
+  // 🚨 STATIC FILES MUST BE ABSOLUTELY FIRST
+  .use(staticPlugin({
+    assets: 'public',
+    prefix: '',
+    
+  }))
+
   // Global plugins
   .use(html())
-  .use(
-    staticPlugin({
-      assets: './public',
-      prefix: '/',
-    })
-  )
 
   // Global error handling
   .onError(({ code, error, set }) => {
@@ -58,6 +59,11 @@ const app = new Elysia()
     }
   })
 
+  // Favicon route to bypass static plugin depth limitation
+  .get('/favicon.ico', () => {
+    return Bun.file('./public/assets/images/favicon.ico');
+  })
+
   // Health check endpoint
   .get('/health', () => ({
     status: 'ok',
@@ -65,8 +71,8 @@ const app = new Elysia()
     version: '0.1.0',
     timestamp: new Date().toISOString(),
     environment: env.NODE_ENV,
-  }))
-
+  })) 
+ 
   // Welcome page
   .get('/', async () => {
     const html = await TemplateService.render(
@@ -77,9 +83,11 @@ const app = new Elysia()
         port: env.PORT,
       },
       {
-        title: 'Schreibmaschine',
+        title: 'Schreibmaschine - Kollaborative Schreibwerkstätten',
+        additionalCSS: 'welcome',
         showHeader: false,
         showFooter: false,
+        showMainWrapper: false,
       }
     );
 
@@ -87,24 +95,25 @@ const app = new Elysia()
       headers: { 'Content-Type': 'text/html; charset=utf-8' },
     });
   })
-
-  // Mount API routes
+ 
+  // Mount API routes (safe prefixes: /api/*)
   .use(apiRoutes)
 
-  // Mount session routes (login/logout/status)
+  // Mount session routes (safe prefixes: /api/sessions/*)
   .use(sessionRoutes)
 
-  // Mount SSE routes (real-time updates)
+  // Mount SSE routes (safe prefixes: /api/groups/*, /api/admin/*)
   .use(sseRoutes)
 
-  // Mount group routes (handles workshop group URLs and lobby)
-  .use(groupRoutes)
+  // Mount admin routes (safe prefixes: /admin/*)
+  .use(adminRoutes)
 
-  // Mount admin routes (password-protected administration)
-  .use(adminRoutes);
+  // Mount group routes LAST (catch-all: /:workshopSlug/:groupSlug)
+  .use(groupRoutes);
 
 // For development, let Bun handle the server startup
 export type App = typeof app;
+ 
 export default {
   port: env.PORT,
   hostname: env.HOST,

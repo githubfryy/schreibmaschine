@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ title }} - Schreibmaschine</title>
-  <link rel="stylesheet" href="/css/main.css">
+  <title>{{ title || "Schreibmaschine" }}</title>
+  <link rel="icon" type="image/x-icon" href="/assets/images/favicon.ico">
+  <link rel="stylesheet" href="/assets/css/main.css">
   {{ if additionalCSS }}
-  <link rel="stylesheet" href="/css/{{ additionalCSS }}.css">
+  <link rel="stylesheet" href="/assets/css/{{ additionalCSS }}.css">
   {{ /if }}
 </head>
 <body>
@@ -30,9 +31,13 @@
   </header>
   {{ /if }}
 
+  {{ if showMainWrapper }}
   <main class="main-content">
     {{ content }}
   </main>
+  {{ else }}
+  {{ content }}
+  {{ /if }}
 
   {{ if showFooter }}
   <footer class="app-footer">
@@ -43,19 +48,19 @@
   {{ /if }}
 
   <!-- Alpine.js Plugins (must load before Alpine.js core) -->
-  <script src="/js/alpinejs/alpinejs_persist.js" defer></script>
-  <script src="/js/alpinejs/alpine_ajax.js" defer></script>
-  <script src="/js/alpinejs/alpinejs_focus.js" defer></script>
-  <script src="/js/alpinejs/alpinejs_intersect.js" defer></script>
+  <script src="/assets/js/alpinejs/alpinejs_persist.js" defer></script>
+  <script src="/assets/js/alpinejs/alpine_ajax.js" defer></script>
+  <script src="/assets/js/alpinejs/alpinejs_focus.js" defer></script>
+  <script src="/assets/js/alpinejs/alpinejs_intersect.js" defer></script>
   
   <!-- Alpine.js Core (must load last) -->
-  <script src="/js/alpinejs/alpinejs.js" defer></script>
+  <script src="/assets/js/alpinejs/alpinejs.js" defer></script>
   
   <!-- Common JavaScript utilities -->
-  <script src="/js/common.js"></script>
+  <script src="/assets/js/common.js"></script>
   
   {{ if additionalJS }}
-  <script src="/js/{{ additionalJS }}.js"></script>
+  <script src="/assets/js/{{ additionalJS }}.js"></script>
   {{ /if }}
 </body>
 </html>

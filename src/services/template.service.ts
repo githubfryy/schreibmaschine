@@ -6,7 +6,7 @@
  */
 
 import vento from 'ventojs';
-import type { Environment, TemplateResult } from 'ventojs/src/environment.js';
+import type { Environment } from 'ventojs/src/environment.js';
 import { join } from 'node:path';
 
 export interface TemplateData {
@@ -19,6 +19,7 @@ export interface TemplateOptions {
   additionalJS?: string;
   showHeader?: boolean;
   showFooter?: boolean;
+  showMainWrapper?: boolean;
   title?: string;
   subtitle?: string;
   navigation?: Array<{
@@ -37,9 +38,10 @@ export class TemplateService {
    */
   private static initializeVento() {
     if (!TemplateService.vento) {
+      
       TemplateService.vento = vento({
         includes: TemplateService.VIEWS_PATH,
-        autoescape: true,
+        autoescape: false,  // Let HTML render directly (VentoJS default)
         dataVarname: 'it',
       });
 
@@ -92,6 +94,11 @@ export class TemplateService {
       return text.substring(0, length) + '...';
     };
 
+    // Custom safe filter to render HTML content properly
+    env.filters['safe'] = (content: string) => {
+      return content; // Return content as-is for HTML rendering
+    };
+
     // Capitalize first letter (German-aware)
     env.filters['capitalize'] = (text: string) => {
       if (!text) return text;
@@ -142,12 +149,20 @@ export class TemplateService {
     };
 
     try {
-      // Determine template file
+      // VentoJS template path with .vto extension
       const templateFile = `pages/${pageName}.vto`;
 
-      // Render the page
-      const result: TemplateResult = await env.run(templateFile, templateData);
-      return result.content;
+      // FIXED: Handle VentoJS return format properly
+      const result = await env.run(templateFile, templateData);
+      
+      // VentoJS might return either string directly or { content: string }
+      if (typeof result === 'string') {
+        return result;
+      } else if (result && typeof result === 'object' && 'content' in result) {
+        return result.content;
+      } else {
+        throw new Error(`Unexpected VentoJS return format: ${typeof result}`);
+      }
     } catch (error) {
       console.error('VentoJS Template Error:', error);
       // Fallback error template
@@ -163,8 +178,10 @@ export class TemplateService {
 
     try {
       const templateFile = `components/${componentName}.vto`;
-      const result: TemplateResult = await env.run(templateFile, data);
-      return result.content;
+      const result = await env.run(templateFile, data);
+      
+      // Handle VentoJS return format
+      return typeof result === 'string' ? result : result.content;
     } catch (error) {
       console.error(`VentoJS Component Error (${componentName}):`, error);
       return `<!-- Component error: ${componentName} -->`;
@@ -178,8 +195,10 @@ export class TemplateService {
     const env = TemplateService.initializeVento();
 
     try {
-      const result: TemplateResult = await env.runString(templateString, data);
-      return result.content;
+      const result = await env.runString(templateString, data);
+      
+      // Handle VentoJS return format
+      return typeof result === 'string' ? result : result.content;
     } catch (error) {
       console.error('VentoJS String Template Error:', error);
       return `<!-- Template error: ${(error as Error).message} -->`;

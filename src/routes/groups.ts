@@ -176,6 +176,18 @@ export const groupRoutes = new Elysia()
     '/:workshopSlug/:groupSlug/vorraum',
     async ({ params, set }) => {
       try {
+        // 🛡️ Guard against static file patterns
+        if (params.workshopSlug.includes('.') || params.groupSlug.includes('.')) {
+          set.status = 404;
+          return 'Not Found';
+        }
+        
+        // 🛡️ Basic slug validation (only letters, numbers, hyphens, underscores)
+        const slugPattern = /^[a-z0-9_-]+$/i;
+        if (!slugPattern.test(params.workshopSlug) || !slugPattern.test(params.groupSlug)) {
+          set.status = 404;
+          return 'Not Found';
+        }
         const lobbyInfo = await UrlService.getLobbyInfo(params.workshopSlug, params.groupSlug);
 
         if (!lobbyInfo) {
@@ -243,6 +255,18 @@ export const groupRoutes = new Elysia()
     '/:workshopSlug/:groupSlug',
     async ({ params, set, headers }) => {
       try {
+        // 🛡️ Guard against static file patterns
+        if (params.workshopSlug.includes('.') || params.groupSlug.includes('.')) {
+          set.status = 404;
+          return 'Not Found';
+        }
+        
+        // 🛡️ Basic slug validation (only letters, numbers, hyphens, underscores)
+        const slugPattern = /^[a-z0-9_-]+$/i;
+        if (!slugPattern.test(params.workshopSlug) || !slugPattern.test(params.groupSlug)) {
+          set.status = 404;
+          return 'Not Found';
+        }
         const resolved = await UrlService.resolveBySemanticUrl(
           params.workshopSlug,
           params.groupSlug

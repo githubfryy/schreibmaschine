@@ -1,193 +1,69 @@
 {{ layout "layouts/base.vto" }}
 
-<div class="welcome-container">
-  <div class="welcome-header">
-    <h1>🖋️ Schreibmaschine</h1>
-    <p class="welcome-subtitle">Kollaborative Schreibwerkstätten</p>
+<!-- Hero Section -->
+<section class="hero">
+  <div class="hero-content">
+    <h1 class="hero-title">Schreibmaschine</h1>
+    <p class="hero-subtitle">Kollaborative Schreibwerkstätten für kreative Köpfe</p>
+    <p class="hero-description">
+      Ein lokaler Raum für gemeinsames Schreiben, strukturierte Übungen und kreative Entfaltung
+    </p>
   </div>
+</section>
 
-  <div class="welcome-content">
-    <div class="welcome-card">
-      <h2>Willkommen!</h2>
-      <p>
-        Schreibmaschine ist eine Plattform für kreative Schreibworkshops. 
-        Arbeitet zusammen an Geschichten, Gedichten und anderen Texten in 
-        einer unterstützenden Gemeinschaft.
-      </p>
-      
-      <div class="features">
-        <div class="feature">
-          <span class="feature-icon">👥</span>
-          <h3>Kollaborativ</h3>
-          <p>Schreibt gemeinsam an Texten und teilt eure Kreativität</p>
-        </div>
-        
-        <div class="feature">
-          <span class="feature-icon">🎯</span>
-          <h3>Strukturiert</h3>
-          <p>Angeleitete Übungen und Aktivitäten für alle Erfahrungsstufen</p>
-        </div>
-        
-        <div class="feature">
-          <span class="feature-icon">🔒</span>
-          <h3>Privat</h3>
-          <p>Eure Texte bleiben in der Gruppe - sichere Umgebung für Kreativität</p>
-        </div>
-      </div>
-    </div>
-
-    {{ if isDevelopment }}
-    <div class="development-info">
-      <h3>🔧 Entwicklungsmodus</h3>
-      <div class="dev-stats">
-        <div class="stat">
-          <strong>Umgebung:</strong> {{ environment }}
-        </div>
-        <div class="stat">
-          <strong>Port:</strong> {{ port }}
-        </div>
-        <div class="stat">
-          <strong>Bun Version:</strong> {{ bun_version }}
-        </div>
-        <div class="stat">
-          <strong>App Version:</strong> {{ appVersion }}
-        </div>
+<!-- Features Grid -->
+<section class="features">
+  <div class="container">
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">✍️</div>
+        <h3>Gemeinsam schreiben</h3>
+        <p>Kollaborative Texterstellung in Echtzeit mit anderen Teilnehmern</p>
       </div>
       
-      <div class="dev-links">
-        <a href="/admin" class="btn-secondary">Admin-Bereich</a>
-        <a href="/api/health" class="btn-secondary">API Status</a>
+      <div class="feature-card">
+        <div class="feature-icon">🎯</div>
+        <h3>Strukturierte Übungen</h3>
+        <p>Angeleitete Aktivitäten für alle Erfahrungsstufen und Genres</p>
+      </div>
+      
+      <div class="feature-card">
+        <div class="feature-icon">🌐</div>
+        <h3>Lokal & sicher</h3>
+        <p>Läuft offline in eurer Workshop-Umgebung ohne externe Abhängigkeiten</p>
       </div>
     </div>
-    {{ /if }}
   </div>
-</div>
+</section>
 
-<style>
-.welcome-container {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
+{{ if environment === "development" }}
+<!-- Development Info -->
+<section class="dev-section">
+  <div class="container">
+    <div class="dev-card">
+      <h3>Entwicklungsmodus aktiv</h3>
+      <div class="dev-grid">
+        <div class="dev-item">
+          <span class="dev-label">Umgebung</span>
+          <span class="dev-value">{{ environment }}</span>
+        </div>
+        <div class="dev-item">
+          <span class="dev-label">Server</span>
+          <span class="dev-value">localhost:{{ port }}</span>
+        </div>
+        <div class="dev-item">
+          <span class="dev-label">Runtime</span>
+          <span class="dev-value">Bun {{ bun_version }}</span>
+        </div>
+      </div>
+      
+      <div class="dev-actions">
+        <a href="/admin" class="btn-link">Admin-Bereich →</a>
+        <a href="/api/health" class="btn-link">API Status →</a>
+      </div>
+    </div>
+  </div>
+</section>
+{{ /if }}
 
-.welcome-header h1 {
-  font-size: 3rem;
-  margin-bottom: 0.5rem;
-  color: #1976d2;
-}
-
-.welcome-subtitle {
-  font-size: 1.2rem;
-  color: #666;
-  margin-bottom: 3rem;
-}
-
-.welcome-card {
-  background: white;
-  border-radius: 8px;
-  padding: 2rem;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  margin-bottom: 2rem;
-}
-
-.welcome-card h2 {
-  color: #333;
-  margin-bottom: 1rem;
-}
-
-.features {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 2rem;
-  margin-top: 2rem;
-}
-
-.feature {
-  text-align: center;
-}
-
-.feature-icon {
-  font-size: 2rem;
-  display: block;
-  margin-bottom: 0.5rem;
-}
-
-.feature h3 {
-  color: #1976d2;
-  margin-bottom: 0.5rem;
-}
-
-.feature p {
-  color: #666;
-  font-size: 0.9rem;
-  line-height: 1.4;
-}
-
-.development-info {
-  background: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 8px;
-  padding: 1.5rem;
-  text-align: left;
-}
-
-.development-info h3 {
-  margin-top: 0;
-  color: #495057;
-}
-
-.dev-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-  margin: 1rem 0;
-}
-
-.stat {
-  background: white;
-  padding: 0.75rem;
-  border-radius: 4px;
-  border: 1px solid #dee2e6;
-}
-
-.dev-links {
-  display: flex;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.btn-secondary {
-  display: inline-block;
-  background: #6c757d;
-  color: white;
-  padding: 0.5rem 1rem;
-  text-decoration: none;
-  border-radius: 4px;
-  font-size: 0.9rem;
-  transition: background-color 0.2s;
-}
-
-.btn-secondary:hover {
-  background: #5a6268;
-}
-
-@media (max-width: 768px) {
-  .welcome-container {
-    padding: 1rem;
-  }
-  
-  .welcome-header h1 {
-    font-size: 2rem;
-  }
-  
-  .features {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-  
-  .dev-links {
-    flex-direction: column;
-  }
-}
-</style>
+{{ /layout }}
